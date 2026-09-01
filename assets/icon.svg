@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Telegram Companion">
+  <circle cx="128" cy="128" r="118" fill="#14b8a6"/>
+  <circle cx="128" cy="128" r="108" fill="none" stroke="#ccfbf1" stroke-width="3"/>
+  <path fill="#ffffff" d="M55 124.5 201 65l-30.2 133-48.2-39.2-27.7 27.1 6.1-47.3L55 124.5Zm55.7 19.1 12.9 10.6 36.9-48.8-49.8 38.2Z"/>
+</svg>

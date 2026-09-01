@@ -1,0 +1,31 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  default: none
+  enable:
+    - errcheck
+    - gosec
+    - govet
+    - ineffassign
+    - revive
+    - staticcheck
+    - unused
+  exclusions:
+    rules:
+      - path: _test\.go$
+        linters:
+          - errcheck
+          - gosec
+      - linters:
+          - errcheck
+        text: 'Error return value of `.*\.(Close|Remove|RemoveAll|Rollback)` is not checked'
+      - linters:
+          - gosec
+        text: 'G(101|104|115|122|201|204|301|302|304|401|505|703):'
+      - linters:
+          - revive
+        text: '(exported .* should have comment|package-comments: should have a package comment|increment-decrement:|unused-parameter:|blank-imports:|context-as-argument:|type name will be used .* stutters|redefines-builtin-id:)'
+      - linters:
+          - unused
+        text: 'func verifyManifestFiles is unused'
