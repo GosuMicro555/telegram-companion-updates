@@ -1,0 +1,24 @@
+.driveAccountsToolbar { display: flex; justify-content: flex-end; margin: 0 0 18px; }
+.driveAccountsToolbar button, .driveImportDialog button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.driveImportBackdrop { position: fixed; inset: 0; z-index: 1000; background: #06131ba8; backdrop-filter: blur(6px); display: grid; place-items: center; padding: 24px; }
+.driveImportDialog { width: min(640px, 100%); max-height: calc(100vh - 48px); overflow: auto; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 20px; padding: 26px; box-shadow: 0 24px 90px #0006; }
+.driveImportDialog header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.driveImportDialog h2 { font-size: 21px; margin: 0; }
+.driveImportDialog header button { padding: 6px; background: transparent; border: 0; }
+.driveImportDialog > p { font-size: 14px; line-height: 1.5; opacity: .8; margin: 14px 0 22px; }
+.driveImportInput { display: flex; flex-direction: column; gap: 9px; font-size: 14px; }
+.driveImportInput textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 140px; border: 1px solid var(--border-strong); border-radius: 10px; padding: 12px; font: inherit; font-size: 13px; line-height: 1.7; color: inherit; background: var(--surface-subtle); }
+.driveImportInput textarea:focus { outline: 2px solid #41cbd7; outline-offset: 2px; }
+.driveImportInput textarea[aria-invalid=true] { border-color: #e58c8c; }
+.driveImportCounter { text-align: right; opacity: .7; font-size: 12px; }
+.driveImportError { color: var(--danger); font-size: 13px; line-height: 1.5; }
+.driveImportResults { margin-top: 20px; }
+.driveImportSummary { font-size: 14px; font-weight: 600; }
+.driveImportResults ol { padding: 0; margin: 0; max-height: 260px; overflow: auto; }
+.driveImportRow { display: grid; grid-template-columns: 35px 1fr auto; gap: 12px; padding: 12px 0; border-top: 1px solid #78bac425; font-size: 13px; }
+.driveImportRow small { display: block; font-size: 12px; margin-top: 5px; line-height: 1.4; opacity: .85; }
+.driveImportRow.failed { color: var(--danger); }
+.driveImportRow.added { color: var(--success); }
+.driveImportDialog footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.driveImportDialog footer button { padding: 10px 15px; border-radius: 9px; }
+.driveImportDialog button:disabled { opacity: .45; cursor: not-allowed; }

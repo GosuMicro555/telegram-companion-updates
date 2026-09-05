@@ -88,6 +88,7 @@ import { UpdatePanel } from "./UpdatePanel";
 import { arrayFromBridge } from "./bridgeCollections";
 import "./styles.css";
 import { AccountRestView } from "./AccountRestView";
+import { DriveAccountsImport } from "./DriveAccountsImport";
 import { normalizeCanonicalKeywords, type CanonicalKeyword } from "./analyticsController";
 
 const LocaleContext = createContext<Locale>("ru");
@@ -1253,6 +1254,7 @@ function AccountsView({ accounts, error, profiles, setAccounts, setError, onAssi
 
   return (
     <section>
+      <DriveAccountsImport locale={locale} />
       {error && <div className="errorBanner">{error}</div>}
       <div className="cardsGrid">
       {accounts.map((account) => (

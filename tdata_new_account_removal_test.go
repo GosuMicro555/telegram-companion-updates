@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestTDataNewAccountRuntimeSurfaceIsRemoved(t *testing.T) {
+func TestLegacyTDataTransferRuntimeSurfaceIsRemoved(t *testing.T) {
 	forbiddenPaths := []string{
 		filepath.Join("frontend", "src", "Master"+"TDataInbox.tsx"),
 		filepath.Join("frontend", "src", "Master"+"TDataInbox.test.tsx"),
@@ -176,8 +176,6 @@ func removedTDataTransferTokens() [][]byte {
 		[]byte("NewSession" + "Importer"),
 		[]byte("NewTData" + "ImportStore"),
 		[]byte("tdata-" + "import"),
-		[]byte("Add tdata " + "accounts"),
-		[]byte("Добавить tdata " + "аккаунты"),
 	}
 }
 

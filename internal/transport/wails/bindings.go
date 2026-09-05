@@ -118,6 +118,7 @@ type ProxyStatusProvider interface {
 }
 
 type Bindings struct {
+	driveAccounts           driveAccountsRuntime
 	rootMu                  sync.RWMutex
 	root                    context.Context
 	automation              *usecase.AutomationController

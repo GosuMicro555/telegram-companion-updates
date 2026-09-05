@@ -10,7 +10,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 )
 
-const desktopSingleInstanceID = "b9f6d837-c30e-46e0-a718-f7a3d1e2c689"
+var desktopSingleInstanceID = "b9f6d837-c30e-46e0-a718-f7a3d1e2c689"
 
 func withDesktopSingleInstance(
 	run func(*options.App) error,

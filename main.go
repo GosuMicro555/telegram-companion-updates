@@ -91,6 +91,9 @@ type desktopPaths struct {
 	resources string
 }
 
+var desktopSecretService = "telegram-companion"
+var desktopWindowTitle = "Telegram Companion"
+
 func NewDesktopApp() *DesktopApp {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	configRoot, err := os.UserConfigDir()
@@ -115,7 +118,7 @@ func NewDesktopApp() *DesktopApp {
 			panic(err)
 		}
 	}
-	app, err := newDesktopAppWithPaths(context.Background(), paths, log, secretservice.NewSecretStore("telegram-companion"))
+	app, err := newDesktopAppWithPaths(context.Background(), paths, log, secretservice.NewSecretStore(desktopSecretService))
 	if err != nil {
 		panic(err)
 	}
@@ -245,6 +248,7 @@ func newDesktopAppWithPaths(ctx context.Context, paths desktopPaths, log *slog.L
 	)
 	controller := usecase.NewAutomationController(nil)
 	bindings := wailsbindings.NewBindings(controller, store)
+	configureDriveAccountImport(bindings, accountCredentials, factory, telegramgotd.NewRegistryResolver(routeRegistry), dataDir, credentials)
 	wailsbindings.ConfigureAccountRests(bindings, usecase.NewAccountRestService(store, time.Now))
 	bindings.RuntimeStore().Update(func(snapshot *runtimeconfig.Snapshot) {
 		snapshot.OutboundPaused = true
@@ -409,7 +413,10 @@ func loadAccountCredentials(
 			stored[accountID] = converted
 		}
 	}
-	result := make(map[domain.ID]telegramgotd.AppCredentials, len(accounts))
+	result := make(map[domain.ID]telegramgotd.AppCredentials, len(stored))
+	for id, credentials := range stored {
+		result[id] = credentials
+	}
 	for _, account := range accounts {
 		credentials, ok := stored[account.ID]
 		if !ok {
@@ -1119,7 +1126,7 @@ func runDesktop(app *DesktopApp, run func(*options.App) error) error {
 		return errors.New("desktop app and Wails runner are required")
 	}
 	return run(&options.App{
-		Title: "Telegram Companion", Width: 980, Height: 700, MinWidth: 860, MinHeight: 620, WindowStartState: options.Maximised,
+		Title: desktopWindowTitle, Width: 980, Height: 700, MinWidth: 860, MinHeight: 620, WindowStartState: options.Maximised,
 		AssetServer: &assetserver.Options{Assets: assets},
 		Linux:       &linux.Options{Icon: appIcon, ProgramName: "telegram-companion"},
 		Mac: &mac.Options{
@@ -1175,7 +1182,7 @@ func main() {
 	log = slog.New(slog.NewJSONHandler(logOutput, nil))
 
 	licenseStore := license.NewFileStore(paths.root)
-	runtimeSecrets := secretservice.NewSecretStore("telegram-companion")
+	runtimeSecrets := secretservice.NewSecretStore(desktopSecretService)
 	gate, revocationChecker, err := newProductionDesktopLicenseGate(info, licenseStore, runtimeSecrets)
 	if err != nil {
 		log.Error("desktop revocation initialization failed", "error_code", "revocation_initialization")
