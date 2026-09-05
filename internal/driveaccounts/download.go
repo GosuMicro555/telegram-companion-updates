@@ -227,7 +227,15 @@ func folderEntries(body []byte) ([]folderEntry, error) {
 	result := []folderEntry{}
 	seen := map[string]bool{}
 	invalid := false
+	hasTitle := false
+	loginPage := false
 	visit(doc, func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "title" && strings.TrimSpace(nodeText(n)) != "" {
+			hasTitle = true
+		}
+		if n.Type == html.ElementNode && n.Data == "form" && (strings.EqualFold(attr(n, "id"), "gaia_loginform") || isGoogleAccountsURL(attr(n, "action"))) {
+			loginPage = true
+		}
 		if n.Type != html.ElementNode || n.Data != "a" {
 			return
 		}
@@ -247,13 +255,21 @@ func folderEntries(body []byte) ([]folderEntry, error) {
 		seen[canonicalPath(name)] = true
 		result = append(result, folderEntry{ref, name})
 	})
+	// gdown's embedded-folder parser uses the non-empty document title as its
+	// structural marker. It permits a titled page with no child anchors, which
+	// represents a valid empty public directory.
+	if !hasTitle || loginPage {
+		return nil, ErrAccess
+	}
 	if invalid {
 		return nil, ErrUnsafe
 	}
-	if len(result) == 0 {
-		return nil, ErrAccess
-	}
 	return result, nil
+}
+
+func isGoogleAccountsURL(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && u.Host == "accounts.google.com"
 }
 func (d *Downloader) folder(ctx context.Context, ref Reference, destination, prefix string, depth int, seen map[string]bool, count *int, used *int64) error {
 	if depth > MaxDepth || seen[ref.ID] {

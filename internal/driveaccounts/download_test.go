@@ -3,6 +3,7 @@ package driveaccounts
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -55,6 +56,49 @@ func TestDownloadRejectsFolderTraversalAndForeignRedirect(t *testing.T) {
 	request, _ := http.NewRequest("GET", "https://evil.example/download", nil)
 	if err := d.client.CheckRedirect(request, []*http.Request{{}}); err == nil {
 		t.Fatal("allowed foreign redirect")
+	}
+}
+
+func TestDownloadAllowsEmptyFolderInPopulatedTDataTree(t *testing.T) {
+	d := NewDownloader()
+	d.client.Transport = transportFunc(func(r *http.Request) (*http.Response, error) {
+		switch r.URL.Path {
+		case "/embeddedfolderview":
+			switch r.URL.Query().Get("id") {
+			case "root":
+				return response(`<html><title>root</title><a href="https://accounts.google.com/ServiceLogin">Sign in</a><a href="https://drive.google.com/drive/folders/tdata">tdata</a></html>`), nil
+			case "tdata":
+				return response(`<html><title>tdata</title><a href="https://drive.google.com/file/d/keydata/view">key_datas</a><a href="https://drive.google.com/file/d/account/view">D877F783D5D3EF8Cs</a><a href="https://drive.google.com/drive/folders/ancillary">ancillary</a></html>`), nil
+			case "ancillary":
+				return response(`<html><title>ancillary</title><a href="https://accounts.google.com/ServiceLogin">Sign in</a><body></body></html>`), nil
+			}
+		case "/uc":
+			return response("TDF$synthetic"), nil
+		}
+		t.Fatalf("unexpected request: %s", r.URL)
+		return nil, nil
+	})
+	root := t.TempDir()
+	if err := d.Fetch(context.Background(), Reference{ID: "root", Folder: true}, root, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "tdata", "key_datas")); err != nil {
+		t.Fatalf("raw TData file missing: %v", err)
+	}
+	info, err := os.Stat(filepath.Join(root, "tdata", "ancillary"))
+	if err != nil || !info.IsDir() {
+		t.Fatalf("empty ancillary directory missing: %v", err)
+	}
+}
+
+func TestFolderEntriesRejectsGoogleAccessAndLoginPages(t *testing.T) {
+	for _, body := range []string{
+		`<html><body><h1>Google Drive access denied</h1></body></html>`,
+		`<html><title>Sign in</title><form id="gaia_loginform" action="https://accounts.google.com/ServiceLogin"></form></html>`,
+	} {
+		if _, err := folderEntries([]byte(body)); !errors.Is(err, ErrAccess) {
+			t.Fatalf("accepted non-listing page: %v", err)
+		}
 	}
 }
 func TestDownloadConfirmationBoundToOriginalFile(t *testing.T) {
