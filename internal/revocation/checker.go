@@ -53,7 +53,7 @@ func (checker *Checker) Check(ctx context.Context, licenseID string) (Decision, 
 	if err != nil {
 		return CheckRequired, errInvalidChecker
 	}
-	now := checker.now()
+	now := checker.now().UTC().Truncate(time.Second)
 	if !canonicalStateTime(now) {
 		return CheckRequired, errInvalidChecker
 	}

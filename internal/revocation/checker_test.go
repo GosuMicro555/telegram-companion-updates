@@ -35,6 +35,32 @@ func TestCheckerPersistsAuthenticatedDecisionsBeforeReturning(t *testing.T) {
 	}
 }
 
+func TestCheckerNormalizesSystemClockBeforeEvaluation(t *testing.T) {
+	publicKey, privateKey := testManifestKey()
+	rawNow := time.Date(2026, 8, 25, 15, 4, 5, 678_901_234, time.FixedZone("UTC+3", 3*60*60))
+	wantNow := time.Date(2026, 8, 25, 12, 4, 5, 0, time.UTC)
+	payload := testPayload(8, []Entry{})
+	payload.GeneratedAt = wantNow.Format(manifestTimeLayout)
+	envelope, err := Sign(payload, privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store := &checkerStateStore{}
+	checker, err := NewChecker(store, staticFetcher{body: []byte(envelope)}, testKeyID, publicKey, func() time.Time { return rawNow })
+	if err != nil {
+		t.Fatal(err)
+	}
+	decision, err := checker.Check(context.Background(), "license-active-local-clock")
+	if err != nil || decision != Active {
+		t.Fatalf("Check() = %q, %v", decision, err)
+	}
+	saved := store.savedState()
+	if store.saves != 1 || !saved.LastSuccessUTC.Equal(wantNow) || !saved.LastWallUTC.Equal(wantNow) || !canonicalStateTime(saved.LastSuccessUTC) || !canonicalStateTime(saved.LastWallUTC) {
+		t.Fatalf("saved state = %#v (saves=%d)", saved, store.saves)
+	}
+}
+
 func TestCheckerFailsClosedAcrossDependencyFailures(t *testing.T) {
 	publicKey, privateKey := testManifestKey()
 	now := time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)
