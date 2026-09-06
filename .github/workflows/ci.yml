@@ -35,7 +35,7 @@ jobs:
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm ci && npm run build
       - name: Verify model manifest
         run: go run ./scripts/fetch_model.go -verify-manifest-only
       - name: Test Go
@@ -69,6 +69,14 @@ jobs:
         with:
           go-version: "1.26.0"
           cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build embedded frontend
+        working-directory: frontend
+        run: npm ci && npm run build
       - name: Validate pinned public release inputs
         shell: bash
         run: |
@@ -86,7 +94,7 @@ jobs:
           curl --fail --location --proto '=https' --tlsv1.2 --output "$sparkle_archive" "$sparkle_url"
           printf '%s  %s\n' "$sparkle_sha" "$sparkle_archive" | shasum -a 256 -c -
           tar -xf "$sparkle_archive" -C "$sparkle_root"
-          sparkle_framework="$(find "$sparkle_root" -type d -name Sparkle.framework -print -quit)"
+          sparkle_framework="$sparkle_root/Sparkle.framework"
           test -d "$sparkle_framework"
           sparkle_parent="$(dirname "$sparkle_framework")"
           printf 'CGO_CFLAGS=-F%s -arch arm64\n' "$sparkle_parent" >> "$GITHUB_ENV"
