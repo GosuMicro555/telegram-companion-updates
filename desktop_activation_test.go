@@ -8,6 +8,8 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"errors"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -21,6 +23,7 @@ import (
 	appbootstrap "telegram-companion/internal/app"
 	"telegram-companion/internal/bootstrapstate"
 	"telegram-companion/internal/buildinfo"
+	"telegram-companion/internal/domain"
 	"telegram-companion/internal/license"
 	"telegram-companion/internal/revocation"
 	secretservice "telegram-companion/internal/service/secrets"
@@ -458,6 +461,12 @@ func publicBuildInfo() buildinfo.Info {
 	}
 }
 
+func publicEmptyBuildInfo() buildinfo.Info {
+	info := publicBuildInfo()
+	info.BootstrapMode = buildinfo.BootstrapModeEmpty
+	return info
+}
+
 func TestRunDesktopProgramActivationModeDoesNotBindWorkspace(t *testing.T) {
 	startup := wailsbindings.NewStartupBindings("activation", "", nil, nil, nil, nil, nil)
 	activation := wailsbindings.NewActivationBindings(nil, nil, nil, nil)
@@ -628,6 +637,116 @@ func TestImportBundledDesktopStateRejectsCleanPublicProfileWithoutBundle(t *test
 
 	require.False(t, imported)
 	require.Equal(t, desktopRecoverySeedUnavailable, desktopRecoveryCodeForError(err))
+	require.NoDirExists(t, filepath.Join(root, "data"))
+}
+
+func TestImportBundledDesktopStateEmptyPublicProfileDoesNotRequireSeedGrant(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "proxy", "tor-snowflake"), 0o700))
+
+	imported, err := importBundledDesktopState(
+		context.Background(), publicEmptyBuildInfo(), desktopPaths{root: root, resources: t.TempDir()}, nil, nil,
+	)
+
+	require.NoError(t, err)
+	require.False(t, imported)
+}
+
+func TestEmptyPublicProfileReachesRuntimeAfterAuthorizationWithoutSeedBundle(t *testing.T) {
+	root := t.TempDir()
+	runtimeCalls := 0
+	program, err := newDesktopProgram(publicEmptyBuildInfo(), true, func() (*DesktopApp, error) {
+		imported, importErr := importBundledDesktopState(
+			context.Background(), publicEmptyBuildInfo(), desktopPaths{root: root, resources: t.TempDir()}, nil, nil,
+		)
+		if importErr != nil {
+			return nil, importErr
+		}
+		require.False(t, imported)
+		require.NoError(t, os.MkdirAll(filepath.Join(root, "data"), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(root, "data", "app.db"), []byte("runtime-owned-db"), 0o600))
+		runtimeCalls++
+		return &DesktopApp{}, nil
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, desktopModeWorkspace, program.mode)
+	require.Equal(t, 1, runtimeCalls)
+	require.FileExists(t, filepath.Join(root, "data", "app.db"))
+}
+
+func TestEmptyPublicProfileRestartsAfterRuntimeCreatesPristineState(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	resources := t.TempDir()
+	paths := desktopPaths{root: root, resources: resources}
+	writeDesktopTorFixture(t, resources)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	grants := &countingSeedGrantProvider{}
+	secrets := persistentDesktopSecrets{values: completeDesktopOperationalSecrets(nil), calls: make(map[string]int)}
+	initialSecrets := cloneDesktopSecrets(secrets.values)
+
+	imported, err := importBundledDesktopState(ctx, publicEmptyBuildInfo(), paths, grants, nil)
+	require.NoError(t, err)
+	require.False(t, imported)
+	require.Zero(t, grants.calls)
+
+	var first *DesktopApp
+	program, err := newDesktopProgram(publicEmptyBuildInfo(), true, func() (*DesktopApp, error) {
+		first, err = newDesktopAppWithPaths(ctx, paths, log, &secrets)
+		return first, err
+	})
+	require.NoError(t, err)
+	require.Equal(t, desktopModeWorkspace, program.mode)
+	requireEmptyDesktopRuntime(t, first)
+	require.FileExists(t, filepath.Join(root, "data", "app.db"))
+	require.DirExists(t, filepath.Join(root, "data", "backups"))
+	require.DirExists(t, filepath.Join(root, "proxy", "tor-snowflake", "data"))
+	for _, name := range []string{"torrc", "bootstrap.log", "tor-output.log"} {
+		require.FileExists(t, filepath.Join(root, "proxy", "tor-snowflake", name))
+	}
+	require.Equal(t, initialSecrets, secrets.values)
+	first.Shutdown(ctx)
+
+	state, err := appbootstrap.InspectEmptyPublicProfile(root)
+	require.NoError(t, err)
+	require.Equal(t, appbootstrap.FirstLaunchTargetExistingProfile, state)
+	require.NoFileExists(t, filepath.Join(root, "bootstrap-state", "imported.json"))
+	imported, err = importBundledDesktopState(ctx, publicEmptyBuildInfo(), paths, grants, nil)
+	require.NoError(t, err)
+	require.False(t, imported)
+	require.Zero(t, grants.calls)
+
+	var restarted *DesktopApp
+	program, err = newDesktopProgram(publicEmptyBuildInfo(), true, func() (*DesktopApp, error) {
+		restarted, err = newDesktopAppWithPaths(ctx, paths, log, &secrets)
+		return restarted, err
+	})
+	require.NoError(t, err)
+	require.Equal(t, desktopModeWorkspace, program.mode)
+	requireEmptyDesktopRuntime(t, restarted)
+	require.Equal(t, initialSecrets, secrets.values)
+	require.Equal(t, map[string]int{
+		"outbound-target-key":             2,
+		"proxy-credentials-v1":            2,
+		"scout-message-key":               2,
+		"telegram-account-credentials-v1": 2,
+	}, secrets.calls)
+	restarted.Shutdown(ctx)
+}
+
+func TestUnauthorizedEmptyPublicProfileDoesNotConstructRuntimeOrWriteData(t *testing.T) {
+	root := t.TempDir()
+	runtimeCalls := 0
+	program, err := newDesktopProgram(publicEmptyBuildInfo(), false, func() (*DesktopApp, error) {
+		runtimeCalls++
+		require.NoError(t, os.MkdirAll(filepath.Join(root, "data"), 0o700))
+		return &DesktopApp{}, nil
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, desktopModeActivation, program.mode)
+	require.Zero(t, runtimeCalls)
 	require.NoDirExists(t, filepath.Join(root, "data"))
 }
 
@@ -932,6 +1051,42 @@ type testSeedGrantProvider struct {
 
 func (s testSeedGrantProvider) SeedGrant() (license.SeedGrant, error) {
 	return s.grant, s.err
+}
+
+type countingSeedGrantProvider struct{ calls int }
+
+func (s *countingSeedGrantProvider) SeedGrant() (license.SeedGrant, error) {
+	s.calls++
+	return license.SeedGrant{}, license.ErrNoSeedGrant
+}
+
+type persistentDesktopSecrets struct {
+	values map[string][]byte
+	calls  map[string]int
+}
+
+func requireEmptyDesktopRuntime(t *testing.T, app *DesktopApp) {
+	t.Helper()
+	_, err := app.bindings.GetDriveAccountImportStatus()
+	require.NoError(t, err)
+	accounts, err := app.bindings.GetAccounts()
+	require.NoError(t, err)
+	require.Empty(t, accounts)
+	for _, catalog := range []string{string(domain.SourceCatalogOutbound), string(domain.SourceCatalogScout)} {
+		rows, err := app.bindings.GetCatalog(catalog)
+		require.NoError(t, err)
+		require.Empty(t, rows)
+	}
+}
+
+func (s *persistentDesktopSecrets) GetOrCreate(_ context.Context, name string, size int) ([]byte, error) {
+	s.calls[name]++
+	value, found := s.values[name]
+	if !found {
+		value = make([]byte, size)
+		s.values[name] = value
+	}
+	return append([]byte(nil), value...), nil
 }
 
 func TestNewDesktopUpdateServiceOnlyEnablesAuthorizedPublicWorkspace(t *testing.T) {

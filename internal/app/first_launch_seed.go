@@ -671,7 +671,17 @@ func InspectFirstLaunchSeedTarget(targetRoot string) (FirstLaunchTargetState, er
 	if strings.TrimSpace(targetRoot) == "" {
 		return FirstLaunchTargetBlocked, errors.New("first launch seed: target root is required")
 	}
-	return inspectFirstLaunchTarget(filepath.Clean(targetRoot))
+	return inspectFirstLaunchTarget(filepath.Clean(targetRoot), false)
+}
+
+// InspectEmptyPublicProfile recognizes a safe profile created by an empty
+// public build. It remains read-only and permits only validated runtime-owned
+// proxy state before meaningful profile data exists.
+func InspectEmptyPublicProfile(targetRoot string) (FirstLaunchTargetState, error) {
+	if strings.TrimSpace(targetRoot) == "" {
+		return FirstLaunchTargetBlocked, errors.New("first launch seed: target root is required")
+	}
+	return inspectFirstLaunchTarget(filepath.Clean(targetRoot), true)
 }
 
 func pathExists(path string) (bool, error) {
@@ -686,11 +696,11 @@ func pathExists(path string) (bool, error) {
 }
 
 func firstLaunchTargetIsEmpty(root string) (bool, error) {
-	state, err := inspectFirstLaunchTarget(root)
+	state, err := inspectFirstLaunchTarget(root, false)
 	return state == FirstLaunchTargetRequiresSeed, err
 }
 
-func inspectFirstLaunchTarget(root string) (FirstLaunchTargetState, error) {
+func inspectFirstLaunchTarget(root string, allowRuntimeOwnedWithoutProfile bool) (FirstLaunchTargetState, error) {
 	rootInfo, err := os.Lstat(root)
 	if errors.Is(err, os.ErrNotExist) {
 		return FirstLaunchTargetRequiresSeed, nil
@@ -780,7 +790,10 @@ func inspectFirstLaunchTarget(root string) (FirstLaunchTargetState, error) {
 		}
 		return FirstLaunchTargetBlocked, nil
 	}
-	if (hasImportMarker || hasRuntimeOwnedRoot) && !existing {
+	if hasImportMarker && !existing {
+		return FirstLaunchTargetBlocked, nil
+	}
+	if hasRuntimeOwnedRoot && !existing && !allowRuntimeOwnedWithoutProfile {
 		return FirstLaunchTargetBlocked, nil
 	}
 	if existing {
@@ -973,7 +986,7 @@ func inspectFirstLaunchData(root string) (FirstLaunchTargetState, error) {
 	}
 	existing := false
 	allowedDirectories := map[string]struct{}{
-		"backups": {}, "exports": {}, "gotd-import-staging": {}, "import-snapshots": {}, "sessions": {}, "tdata": {},
+		"backups": {}, "drive-account-scratch": {}, "drive-account-sessions": {}, "exports": {}, "gotd-import-staging": {}, "import-snapshots": {}, "sessions": {}, "tdata": {},
 	}
 	for _, entry := range entries {
 		if entry.Type()&os.ModeSymlink != 0 {
@@ -1129,6 +1142,7 @@ func firstLaunchDatabaseIsReplaceable(path string) (bool, error) {
 	databaseURL := &url.URL{Scheme: "file", Path: databasePath}
 	query := databaseURL.Query()
 	query.Set("mode", "ro")
+	query.Set("immutable", "1")
 	databaseURL.RawQuery = query.Encode()
 
 	db, err := sql.Open("sqlite", databaseURL.String())

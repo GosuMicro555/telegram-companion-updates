@@ -168,10 +168,49 @@ func TestValidateAcceptsCompletePublicMetadata(t *testing.T) {
 	}
 }
 
+func TestValidatePublicPreservesExplicitBootstrapMode(t *testing.T) {
+	for _, mode := range []BootstrapMode{BootstrapModeSeeded, BootstrapModeEmpty} {
+		t.Run(string(mode), func(t *testing.T) {
+			info := validPublicInfo()
+			info.BootstrapMode = mode
+			got, err := validate(info)
+			if err != nil {
+				t.Fatalf("validate public metadata: %v", err)
+			}
+			if got.BootstrapMode != mode {
+				t.Fatalf("BootstrapMode = %q, want %q", got.BootstrapMode, mode)
+			}
+		})
+	}
+}
+
 func TestValidateInternalDoesNotEnablePublicCapabilities(t *testing.T) {
 	got, err := validate(Info{Channel: ChannelInternal, ProductID: ProductID, Version: "0.7.0"})
 	if err != nil || got.RequiresActivation() || got.UpdatesEnabled() {
 		t.Fatalf("unexpected metadata: %#v %v", got, err)
+	}
+}
+
+func TestValidateNormalizesLegacyBootstrapModeToSeeded(t *testing.T) {
+	got, err := validate(Info{Channel: ChannelInternal, ProductID: ProductID, Version: "0.7.0"})
+	if err != nil {
+		t.Fatalf("validate internal metadata: %v", err)
+	}
+	if got.BootstrapMode != BootstrapModeSeeded {
+		t.Fatalf("BootstrapMode = %q, want %q", got.BootstrapMode, BootstrapModeSeeded)
+	}
+}
+
+func TestValidateRejectsUnsupportedBootstrapModes(t *testing.T) {
+	for name, info := range map[string]Info{
+		"unknown public mode": func() Info { info := validPublicInfo(); info.BootstrapMode = BootstrapMode("other"); return info }(),
+		"empty internal mode": {Channel: ChannelInternal, ProductID: ProductID, BootstrapMode: BootstrapModeEmpty},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := validate(info); err == nil {
+				t.Fatal("unsupported bootstrap mode accepted")
+			}
+		})
 	}
 }
 

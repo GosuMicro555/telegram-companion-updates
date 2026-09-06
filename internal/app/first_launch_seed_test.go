@@ -219,6 +219,85 @@ func TestInspectFirstLaunchSeedTargetBlocksSymlinkRootWithoutMutation(t *testing
 	}
 }
 
+func TestInspectEmptyPublicProfileAllowsOnlySafeRuntimeRestartState(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(*testing.T, string)
+		want  FirstLaunchTargetState
+	}{
+		{
+			name: "recognized proxy without profile",
+			setup: func(t *testing.T, root string) {
+				if err := os.MkdirAll(filepath.Join(root, "proxy", "tor-snowflake"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: FirstLaunchTargetRequiresSeed,
+		},
+		{
+			name: "pristine database and recognized proxy",
+			setup: func(t *testing.T, root string) {
+				writePristineGeneratedDatabase(t, filepath.Join(root, "data", "app.db"))
+				if err := os.MkdirAll(filepath.Join(root, "proxy", "tor-snowflake"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: FirstLaunchTargetRequiresSeed,
+		},
+		{
+			name: "import marker remains blocked without profile",
+			setup: func(t *testing.T, root string) {
+				writeValidFirstLaunchMarker(t, root)
+				if err := os.MkdirAll(filepath.Join(root, "proxy", "tor-snowflake"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: FirstLaunchTargetBlocked,
+		},
+		{
+			name: "safe drive account runtime directories",
+			setup: func(t *testing.T, root string) {
+				writeSeedFile(t, filepath.Join(root, "data", "drive-account-scratch", "cache", "state"), "runtime")
+				writeSeedFile(t, filepath.Join(root, "data", "drive-account-sessions", "account", "session"), "runtime")
+			},
+			want: FirstLaunchTargetExistingProfile,
+		},
+		{
+			name: "unsafe drive account runtime symlink",
+			setup: func(t *testing.T, root string) {
+				outside := filepath.Join(t.TempDir(), "outside")
+				writeSeedFile(t, outside, "outside")
+				path := filepath.Join(root, "data", "drive-account-scratch", "escape")
+				if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outside, path); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: FirstLaunchTargetBlocked,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			test.setup(t, root)
+			before := snapshotFirstLaunchTree(t, root)
+			got, err := InspectEmptyPublicProfile(root)
+			if err != nil {
+				t.Fatalf("InspectEmptyPublicProfile() error = %v", err)
+			}
+			if got != test.want {
+				t.Fatalf("InspectEmptyPublicProfile() = %v, want %v", got, test.want)
+			}
+			if after := snapshotFirstLaunchTree(t, root); fmt.Sprint(after) != fmt.Sprint(before) {
+				t.Fatalf("empty public inspection mutated tree\nbefore: %v\nafter:  %v", before, after)
+			}
+		})
+	}
+}
+
 func snapshotFirstLaunchTree(t *testing.T, root string) []string {
 	t.Helper()
 	var snapshot []string

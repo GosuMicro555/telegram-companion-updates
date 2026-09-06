@@ -476,6 +476,19 @@ func TestReleaseMetadataIsInjectedIntoTemplate(t *testing.T) {
 	requireContains(t, "build-stage.sh", build, `-tags "$BUILD_TAGS"`)
 }
 
+func TestPublicBootstrapModeIsValidatedAndLinkedAtBuildTime(t *testing.T) {
+	source := readFile(t, scriptPath("build-stage.sh"))
+	for _, required := range []string{
+		`PUBLIC_BOOTSTRAP_MODE="${PUBLIC_BOOTSTRAP_MODE:-seeded}"`,
+		`validate_public_bootstrap_mode`,
+		`case "$PUBLIC_BOOTSTRAP_MODE" in`,
+		`seeded|empty`,
+		`bootstrapMode=$PUBLIC_BOOTSTRAP_MODE`,
+	} {
+		requireContains(t, "build-stage.sh", source, required)
+	}
+}
+
 func TestReleasePreflightRejectsSourceVersionDrift(t *testing.T) {
 	scripts := readScripts(t)
 	lib := scripts["lib.sh"]

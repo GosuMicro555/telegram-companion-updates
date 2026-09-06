@@ -254,7 +254,11 @@ func importBundledDesktopState(
 	if info.Channel != buildinfo.ChannelPublicMacOSARM64 {
 		return false, nil
 	}
-	state, err := appbootstrap.InspectFirstLaunchSeedTarget(paths.root)
+	inspect := appbootstrap.InspectFirstLaunchSeedTarget
+	if info.BootstrapMode == buildinfo.BootstrapModeEmpty {
+		inspect = appbootstrap.InspectEmptyPublicProfile
+	}
+	state, err := inspect(paths.root)
 	if err != nil {
 		return false, newDesktopStartupError(errDesktopStorageUnavailable, err)
 	}
@@ -264,6 +268,9 @@ func importBundledDesktopState(
 	case appbootstrap.FirstLaunchTargetBlocked:
 		return false, errDesktopProfileBlocked
 	case appbootstrap.FirstLaunchTargetRequiresSeed:
+		if info.BootstrapMode == buildinfo.BootstrapModeEmpty {
+			return false, nil
+		}
 	default:
 		return false, errDesktopProfileBlocked
 	}

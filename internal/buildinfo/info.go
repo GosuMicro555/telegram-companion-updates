@@ -24,6 +24,15 @@ const (
 	ChannelPublicMacOSARM64 Channel = "public-macos-arm64"
 )
 
+var bootstrapMode = "seeded"
+
+type BootstrapMode string
+
+const (
+	BootstrapModeSeeded BootstrapMode = "seeded"
+	BootstrapModeEmpty  BootstrapMode = "empty"
+)
+
 type Info struct {
 	Channel               Channel
 	ProductID             string
@@ -33,6 +42,7 @@ type Info struct {
 	RevocationManifestURL string
 	RevocationKeyID       string
 	RevocationPublicKey   string
+	BootstrapMode         BootstrapMode
 }
 
 func (i Info) RequiresActivation() bool {
@@ -54,6 +64,7 @@ func Current() (Info, error) {
 		RevocationManifestURL: revocationManifestURL,
 		RevocationKeyID:       revocationKeyID,
 		RevocationPublicKey:   revocationPublicKey,
+		BootstrapMode:         BootstrapMode(bootstrapMode),
 	})
 	if err != nil {
 		return Info{}, err
@@ -89,9 +100,15 @@ func validate(info Info) (Info, error) {
 	if info.ProductID != ProductID {
 		return Info{}, fmt.Errorf("unsupported product ID %q", info.ProductID)
 	}
+	if info.BootstrapMode == "" {
+		info.BootstrapMode = BootstrapModeSeeded
+	}
 
 	switch info.Channel {
 	case ChannelInternal:
+		if info.BootstrapMode != BootstrapModeSeeded {
+			return Info{}, fmt.Errorf("unsupported internal bootstrap mode %q", info.BootstrapMode)
+		}
 		if info.RevocationManifestURL != "" || info.RevocationKeyID != "" || info.RevocationPublicKey != "" {
 			return Info{}, errors.New("internal build must not configure revocation metadata")
 		}
@@ -125,6 +142,9 @@ func validate(info Info) (Info, error) {
 			return Info{}, fmt.Errorf("invalid revocation public key: %w", err)
 		}
 		info.RevocationPublicKey = revocationKey
+		if info.BootstrapMode != BootstrapModeSeeded && info.BootstrapMode != BootstrapModeEmpty {
+			return Info{}, fmt.Errorf("unsupported public bootstrap mode %q", info.BootstrapMode)
+		}
 
 		return info, nil
 	default:

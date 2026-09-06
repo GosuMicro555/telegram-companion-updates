@@ -3,6 +3,8 @@ set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
+PUBLIC_BOOTSTRAP_MODE="${PUBLIC_BOOTSTRAP_MODE:-seeded}"
+
 fetch_payload() {
   local name="$1"
   local url expected archive archive_part actual
@@ -180,9 +182,17 @@ normalize_bundle_permissions() {
   find "$APP_PATH" -type f ! -perm +111 -exec chmod 0644 {} +
 }
 
+validate_public_bootstrap_mode() {
+  case "$PUBLIC_BOOTSTRAP_MODE" in
+    seeded|empty) ;;
+    *) die "PUBLIC_BOOTSTRAP_MODE must be seeded or empty" ;;
+  esac
+}
+
 main() {
   require_macos_arm64_host
   validate_build_metadata
+  validate_public_bootstrap_mode
   ensure_build_timestamp
   validate_payload_manifest
   mkdir -p "$RELEASE_ROOT" "$ARTIFACT_DIR"
@@ -191,7 +201,7 @@ main() {
   CGO_CFLAGS="-F$SPARKLE_FRAMEWORK_PARENT ${CGO_CFLAGS:-}" \
     CGO_LDFLAGS="-F$SPARKLE_FRAMEWORK_PARENT -Wl,-rpath,@executable_path/../Frameworks ${CGO_LDFLAGS:-}" \
     "$WAILS_BIN" build -clean -skipbindings -platform "$TARGET_OS/$TARGET_ARCH" -tags "$BUILD_TAGS" \
-      -ldflags "-X telegram-companion/internal/buildinfo.version=$RELEASE_VERSION -X telegram-companion/internal/buildinfo.licensePublicKey=$LICENSE_PUBLIC_KEY -X telegram-companion/internal/buildinfo.appcastURL=$APPCAST_URL -X telegram-companion/internal/buildinfo.revocationManifestURL=$REVOCATION_MANIFEST_URL -X telegram-companion/internal/buildinfo.revocationKeyID=$REVOCATION_KEY_ID -X telegram-companion/internal/buildinfo.revocationPublicKey=$REVOCATION_PUBLIC_KEY -X telegram-companion/internal/buildinfo.revocationBuildMetadata=$REVOCATION_BUILD_METADATA"
+      -ldflags "-X telegram-companion/internal/buildinfo.version=$RELEASE_VERSION -X telegram-companion/internal/buildinfo.licensePublicKey=$LICENSE_PUBLIC_KEY -X telegram-companion/internal/buildinfo.appcastURL=$APPCAST_URL -X telegram-companion/internal/buildinfo.revocationManifestURL=$REVOCATION_MANIFEST_URL -X telegram-companion/internal/buildinfo.revocationKeyID=$REVOCATION_KEY_ID -X telegram-companion/internal/buildinfo.revocationPublicKey=$REVOCATION_PUBLIC_KEY -X telegram-companion/internal/buildinfo.revocationBuildMetadata=$REVOCATION_BUILD_METADATA -X telegram-companion/internal/buildinfo.bootstrapMode=$PUBLIC_BOOTSTRAP_MODE"
   [[ -d "$WAILS_APP_PATH" ]] || die "Wails did not produce expected app bundle: $WAILS_APP_PATH"
   mkdir -p "$(dirname "$APP_PATH")"
   ditto "$WAILS_APP_PATH" "$APP_PATH"
