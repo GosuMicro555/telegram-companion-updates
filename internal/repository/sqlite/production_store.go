@@ -994,6 +994,42 @@ func (r *CatalogRepository) List(ctx context.Context, catalog domain.SourceCatal
 func (r *CatalogRepository) Save(ctx context.Context, catalog domain.SourceCatalog, channel domain.Channel) error {
 	return r.store.catalogs.Save(ctx, catalog, channel)
 }
+
+// NextJoiningDue returns the first queued future membership deadline for an
+// account. Timestamp comparison stays in Go because RFC3339Nano's optional
+// fractional seconds are not lexicographically ordered in SQLite text.
+func (r *CatalogRepository) NextJoiningDue(ctx context.Context, accountID domain.ID, after time.Time) (*time.Time, error) {
+	rows, err := r.store.db.QueryContext(ctx, `SELECT join_not_before
+		FROM account_channel_memberships
+		WHERE account_id=? AND status='joining' AND join_not_before IS NOT NULL`, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var earliest *time.Time
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			return nil, err
+		}
+		value, err := parseTime(raw)
+		if err != nil {
+			return nil, err
+		}
+		if !value.After(after) {
+			continue
+		}
+		if earliest == nil || value.Before(*earliest) {
+			candidate := value.UTC()
+			earliest = &candidate
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return earliest, nil
+}
 func (r *CatalogRepository) LoadMembership(ctx context.Context, accountID domain.ID, catalog domain.SourceCatalog, channelID domain.ID) (domain.ChannelMembership, bool, error) {
 	var membership domain.ChannelMembership
 	var isMember int

@@ -40,6 +40,12 @@ type ClientDeactivator interface {
 	Deactivate(domain.ID)
 }
 
+// MembershipDeadlineProvider reports the next local joining deadline for an
+// account. Pending approvals deliberately remain on the periodic recheck.
+type MembershipDeadlineProvider interface {
+	NextMembershipCheck(context.Context, domain.ID, runtimeconfig.Snapshot, time.Time) (*time.Time, error)
+}
+
 type ExplicitLifecycleResetter interface {
 	ResetExplicitLifecycle()
 }
@@ -139,7 +145,8 @@ func (m *Manager) Apply(snapshot runtimeconfig.Snapshot) error {
 }
 
 func sameTelegramActivationConfig(current, next runtimeconfig.Snapshot) bool {
-	if current.OutboundPaused != next.OutboundPaused ||
+	if current.MembershipRevision != next.MembershipRevision ||
+		current.OutboundPaused != next.OutboundPaused ||
 		!maps.Equal(current.Roles, next.Roles) ||
 		!maps.Equal(current.ProxyAssignments, next.ProxyAssignments) ||
 		len(current.CatalogAssignments) != len(next.CatalogAssignments) {
@@ -363,6 +370,38 @@ func (m *Manager) supervise(ctx context.Context, worker *managedAccount) {
 				close(connected)
 				recheckTicker := time.NewTicker(m.membershipRecheckInterval)
 				defer recheckTicker.Stop()
+				var membershipTimer *time.Timer
+				var membershipDeadline <-chan time.Time
+				defer func() {
+					if membershipTimer != nil {
+						stopManagerTimer(membershipTimer)
+					}
+				}()
+				setMembershipDeadline := func(snapshot runtimeconfig.Snapshot, checkedAt time.Time) error {
+					provider, ok := m.activator.(MembershipDeadlineProvider)
+					if !ok {
+						return nil
+					}
+					next, deadlineErr := provider.NextMembershipCheck(runCtx, worker.account.ID, snapshot, checkedAt)
+					if deadlineErr != nil {
+						return deadlineErr
+					}
+					if membershipTimer != nil {
+						stopManagerTimer(membershipTimer)
+						membershipTimer = nil
+					}
+					membershipDeadline = nil
+					if next == nil {
+						return nil
+					}
+					delay := time.Until(next.UTC())
+					if delay <= 0 {
+						delay = time.Millisecond
+					}
+					membershipTimer = time.NewTimer(delay)
+					membershipDeadline = membershipTimer.C
+					return nil
+				}
 				var appliedRevision uint64
 				recheckMembership := false
 				connectedReported := false
@@ -371,8 +410,12 @@ func (m *Manager) supervise(ctx context.Context, worker *managedAccount) {
 					if snapshot.Revision > appliedRevision || recheckMembership {
 						account := worker.account
 						account.Role = snapshot.Roles[account.ID]
+						checkedAt := time.Now().UTC()
 						if applyErr := m.activator.Apply(runCtx, client, account, snapshot); applyErr != nil {
 							return applyErr
+						}
+						if deadlineErr := setMembershipDeadline(snapshot, checkedAt); deadlineErr != nil {
+							return deadlineErr
 						}
 						appliedRevision = snapshot.Revision
 						recheckMembership = false
@@ -386,6 +429,9 @@ func (m *Manager) supervise(ctx context.Context, worker *managedAccount) {
 						return runCtx.Err()
 					case <-worker.updates:
 					case <-recheckTicker.C:
+						recheckMembership = true
+					case <-membershipDeadline:
+						membershipDeadline = nil
 						recheckMembership = true
 					}
 				}
@@ -423,6 +469,19 @@ func (m *Manager) supervise(ctx context.Context, worker *managedAccount) {
 			return
 		}
 		attempt++
+	}
+}
+
+func stopManagerTimer(timer *time.Timer) {
+	if timer == nil {
+		return
+	}
+	if timer.Stop() {
+		return
+	}
+	select {
+	case <-timer.C:
+	default:
 	}
 }
 

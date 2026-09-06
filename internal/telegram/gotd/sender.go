@@ -231,6 +231,13 @@ func (a *ProductionActivator) Apply(ctx context.Context, client TelegramClient, 
 	return a.updates.Apply(ctx, client, account, snapshot)
 }
 
+func (a *ProductionActivator) NextMembershipCheck(ctx context.Context, accountID domain.ID, snapshot runtimeconfig.Snapshot, after time.Time) (*time.Time, error) {
+	if a == nil || a.updates == nil {
+		return nil, nil
+	}
+	return a.updates.NextMembershipCheck(ctx, accountID, snapshot, after)
+}
+
 func (a *ProductionActivator) Deactivate(accountID domain.ID) {
 	a.senders.Unregister(accountID)
 }

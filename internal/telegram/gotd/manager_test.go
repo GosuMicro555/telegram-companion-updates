@@ -265,11 +265,49 @@ type activationRecord struct {
 	account  domain.ID
 	revision uint64
 	role     domain.AccountRole
+	at       time.Time
 }
 
 type recordingActivator struct {
 	mu      sync.Mutex
 	records []activationRecord
+}
+
+type deadlineRecordingActivator struct {
+	recordingActivator
+	next  time.Time
+	calls atomic.Int32
+}
+
+func (a *deadlineRecordingActivator) NextMembershipCheck(context.Context, domain.ID, runtimeconfig.Snapshot, time.Time) (*time.Time, error) {
+	if a.calls.Add(1) != 1 {
+		return nil, nil
+	}
+	next := a.next
+	return &next, nil
+}
+
+type deadlineCrossingActivator struct {
+	recordingActivator
+	next  time.Time
+	calls atomic.Int32
+}
+
+func (a *deadlineCrossingActivator) Apply(ctx context.Context, client TelegramClient, account domain.Account, snapshot runtimeconfig.Snapshot) error {
+	a.recordingActivator.Apply(ctx, client, account, snapshot)
+	if a.calls.Add(1) == 1 {
+		a.next = time.Now().Add(10 * time.Millisecond)
+		time.Sleep(25 * time.Millisecond)
+	}
+	return nil
+}
+
+func (a *deadlineCrossingActivator) NextMembershipCheck(_ context.Context, _ domain.ID, _ runtimeconfig.Snapshot, after time.Time) (*time.Time, error) {
+	if !a.next.After(after) {
+		return nil, nil
+	}
+	next := a.next
+	return &next, nil
 }
 
 type blockingActivator struct {
@@ -354,7 +392,7 @@ func (a *failThenActivate) callCount() int {
 func (a *recordingActivator) Apply(_ context.Context, _ TelegramClient, account domain.Account, snapshot runtimeconfig.Snapshot) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.records = append(a.records, activationRecord{account: account.ID, revision: snapshot.Revision, role: snapshot.Roles[account.ID]})
+	a.records = append(a.records, activationRecord{account: account.ID, revision: snapshot.Revision, role: snapshot.Roles[account.ID], at: time.Now()})
 	return nil
 }
 
@@ -381,6 +419,17 @@ func (a *recordingActivator) count(account domain.ID, revision uint64) int {
 	return count
 }
 
+func (a *recordingActivator) hasAtOrAfter(account domain.ID, revision uint64, at time.Time) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, record := range a.records {
+		if record.account == account && record.revision == revision && !record.at.Before(at) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestManagerPeriodicallyReconcilesMembershipWithoutSnapshotChange(t *testing.T) {
 	client := &managerClient{connected: make(chan struct{}, 1)}
 	activator := &recordingActivator{}
@@ -400,6 +449,85 @@ func TestManagerPeriodicallyReconcilesMembershipWithoutSnapshotChange(t *testing
 	done := make(chan error, 1)
 	go func() { done <- manager.Run(ctx) }()
 	eventually(t, func() bool { return activator.count("one", 1) >= 2 })
+
+	cancel()
+	require.ErrorIs(t, <-done, context.Canceled)
+}
+
+func TestManagerReconcilesAtFutureMembershipDeadlineBeforeFallbackPeriod(t *testing.T) {
+	client := &managerClient{connected: make(chan struct{}, 1)}
+	activator := &deadlineRecordingActivator{next: time.Now().Add(25 * time.Millisecond)}
+	manager := NewManager(
+		managerAccountRepo{accounts: []domain.Account{{ID: "one", Status: domain.AccountActive}}},
+		&managerFactory{clients: map[domain.ID]*managerClient{"one": client}, news: map[domain.ID]int{}},
+		activator,
+		nil,
+	)
+	manager.membershipRecheckInterval = 15 * time.Minute
+	require.NoError(t, manager.Apply(runtimeconfig.Snapshot{
+		Revision: 1, MembershipRevision: 1,
+		Roles: map[domain.ID]domain.AccountRole{"one": domain.AccountRoleSpammer},
+	}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- manager.Run(ctx) }()
+	eventually(t, func() bool { return activator.hasAtOrAfter("one", 1, activator.next) })
+
+	cancel()
+	require.ErrorIs(t, <-done, context.Canceled)
+}
+
+func TestManagerRetainsDeadlineThatPassesDuringMembershipApply(t *testing.T) {
+	client := &managerClient{connected: make(chan struct{}, 1)}
+	activator := &deadlineCrossingActivator{}
+	manager := NewManager(
+		managerAccountRepo{accounts: []domain.Account{{ID: "one", Status: domain.AccountActive}}},
+		&managerFactory{clients: map[domain.ID]*managerClient{"one": client}, news: map[domain.ID]int{}},
+		activator,
+		nil,
+	)
+	manager.membershipRecheckInterval = 15 * time.Minute
+	require.NoError(t, manager.Apply(runtimeconfig.Snapshot{
+		Revision: 1, MembershipRevision: 1,
+		Roles: map[domain.ID]domain.AccountRole{"one": domain.AccountRoleSpammer},
+	}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- manager.Run(ctx) }()
+	eventually(t, func() bool { return activator.count("one", 1) >= 2 })
+
+	cancel()
+	require.ErrorIs(t, <-done, context.Canceled)
+}
+
+func TestManagerReconcilesMembershipRevisionWithUnchangedCatalogAssignments(t *testing.T) {
+	client := &managerClient{connected: make(chan struct{}, 1)}
+	activator := &recordingActivator{}
+	manager := NewManager(
+		managerAccountRepo{accounts: []domain.Account{{ID: "one", Status: domain.AccountActive}}},
+		&managerFactory{clients: map[domain.ID]*managerClient{"one": client}, news: map[domain.ID]int{}},
+		activator,
+		nil,
+	)
+	first := runtimeconfig.Snapshot{
+		Revision: 1, MembershipRevision: 1,
+		Roles:              map[domain.ID]domain.AccountRole{"one": domain.AccountRoleSpammer},
+		CatalogAssignments: map[domain.SourceCatalog][]domain.ID{domain.SourceCatalogOutbound: {"channel"}},
+	}
+	require.NoError(t, manager.Apply(first))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- manager.Run(ctx) }()
+	eventually(t, func() bool { return activator.has("one", 1) })
+
+	second := first
+	second.Revision = 2
+	second.MembershipRevision = 2
+	require.NoError(t, manager.Apply(second))
+	eventually(t, func() bool { return activator.has("one", 2) })
 
 	cancel()
 	require.ErrorIs(t, <-done, context.Canceled)

@@ -1237,6 +1237,7 @@ func (b *Bindings) RetryCatalogJoin(catalog string, channelID string) ([]Channel
 	if _, err := b.catalogs.RetryJoin(ctx, source, domain.ID(channelID)); err != nil {
 		return nil, err
 	}
+	b.publishMembershipChange()
 	rows, err := b.channelModeration.List(ctx, time.Now())
 	if err != nil {
 		return nil, err
@@ -2759,6 +2760,13 @@ func (b *Bindings) publishCatalog(catalog domain.SourceCatalog, rows []domain.Ch
 			next.CatalogAssignments = make(map[domain.SourceCatalog][]domain.ID)
 		}
 		next.CatalogAssignments[catalog] = catalogAssignments(rows)
+		next.MembershipRevision++
+	})
+}
+
+func (b *Bindings) publishMembershipChange() uint64 {
+	return b.runtime.Update(func(next *runtimeconfig.Snapshot) {
+		next.MembershipRevision++
 	})
 }
 

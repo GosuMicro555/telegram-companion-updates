@@ -1353,6 +1353,7 @@ func TestBindingsCatalogToggleJoinAndLeaveAreIndependent(t *testing.T) {
 	memberships, err := store.ListMemberships(context.Background(), catalog, "channel")
 	require.NoError(t, err)
 	require.Empty(t, memberships, "processing toggle must not create membership intents")
+	beforeJoin := bindings.RuntimeStore().Current().MembershipRevision
 
 	rows, err = bindings.JoinCatalogEntry(string(catalog), "channel")
 	require.NoError(t, err)
@@ -1361,6 +1362,7 @@ func TestBindingsCatalogToggleJoinAndLeaveAreIndependent(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, memberships, 1)
 	require.Equal(t, "joining", memberships[0].Status)
+	require.Greater(t, bindings.RuntimeStore().Current().MembershipRevision, beforeJoin)
 
 	rows, err = bindings.LeaveCatalogEntry(string(catalog), "channel")
 	require.NoError(t, err)
@@ -1387,6 +1389,7 @@ func TestBindingsRetryCatalogJoinRequeuesPendingApprovalMemberships(t *testing.T
 		},
 	}
 	bindings := NewBindings(usecase.NewAutomationController(nil), store)
+	beforeRetry := bindings.RuntimeStore().Current().MembershipRevision
 
 	rows, err := bindings.RetryCatalogJoin(string(catalog), "channel")
 
@@ -1397,6 +1400,7 @@ func TestBindingsRetryCatalogJoinRequeuesPendingApprovalMemberships(t *testing.T
 	require.Len(t, memberships, 1)
 	require.Equal(t, "joining", memberships[0].Status)
 	require.Nil(t, memberships[0].RequestSubmittedAt)
+	require.Greater(t, bindings.RuntimeStore().Current().MembershipRevision, beforeRetry)
 }
 
 func TestBindingsPersistAppSettings(t *testing.T) {

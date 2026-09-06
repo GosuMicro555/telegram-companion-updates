@@ -43,6 +43,10 @@ type selfUserIDProvider interface {
 	SelfUserID() int64
 }
 
+type joiningDeadlineCatalog interface {
+	NextJoiningDue(context.Context, domain.ID, time.Time) (*time.Time, error)
+}
+
 type managedSenderRegistry struct {
 	mu      sync.RWMutex
 	userIDs map[int64]struct{}
@@ -321,6 +325,19 @@ func (a *UpdateActivator) Apply(ctx context.Context, client TelegramClient, acco
 	a.mu.Unlock()
 	setter.SetUpdateHandler(router.dispatcher())
 	return nil
+}
+
+// NextMembershipCheck returns the next queued join for one account. The
+// manager keeps its existing periodic check for pending approvals.
+func (a *UpdateActivator) NextMembershipCheck(ctx context.Context, accountID domain.ID, _ runtimeconfig.Snapshot, after time.Time) (*time.Time, error) {
+	if a == nil || a.catalogs == nil {
+		return nil, nil
+	}
+	catalogs, ok := a.catalogs.(joiningDeadlineCatalog)
+	if !ok {
+		return nil, nil
+	}
+	return catalogs.NextJoiningDue(ctx, accountID, after.UTC())
 }
 
 func otherCatalog(catalog domain.SourceCatalog) domain.SourceCatalog {

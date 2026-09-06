@@ -143,6 +143,45 @@ func TestJoinScheduleRoundTripPreservesInitialTime(t *testing.T) {
 	require.Equal(t, &initial, memberships[0].JoinNotBefore)
 }
 
+func TestCatalogRepositoryNextJoiningDueSkipsPastAndTerminalMemberships(t *testing.T) {
+	ctx := context.Background()
+	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "app.db"))
+	require.NoError(t, err)
+	defer db.Close()
+	require.NoError(t, Migrate(ctx, db))
+	store := NewProductionStore(db)
+	now := time.Date(2026, 9, 7, 0, 43, 0, 0, time.UTC)
+	account := domain.Account{ID: "account-1", Role: domain.AccountRoleSpammer, Status: domain.AccountActive, SessionPath: "/sessions/account-1", CreatedAt: now, UpdatedAt: now}
+	require.NoError(t, store.Accounts().Save(ctx, account))
+
+	// RFC3339Nano omits the fractional suffix for whole seconds. A textual SQL
+	// comparison would incorrectly place this first deadline before `now`.
+	first := now.Add(150 * time.Millisecond)
+	second := now.Add(time.Second)
+	for _, membership := range []domain.ChannelMembership{
+		{AccountID: account.ID, ChannelID: "past", Status: "joining", JoinNotBefore: timePtr(now.Add(-time.Second))},
+		{AccountID: account.ID, ChannelID: "first", Status: "joining", JoinNotBefore: timePtr(first)},
+		{AccountID: account.ID, ChannelID: "second", Status: "joining", JoinNotBefore: timePtr(second)},
+		{AccountID: account.ID, ChannelID: "member", IsMember: true, Status: "member", JoinNotBefore: timePtr(first)},
+		{AccountID: account.ID, ChannelID: "pending", Status: "pending_approval", JoinNotBefore: timePtr(first)},
+		{AccountID: account.ID, ChannelID: "leaving", Status: "leaving", JoinNotBefore: timePtr(first)},
+	} {
+		require.NoError(t, store.SaveMembership(ctx, domain.SourceCatalogOutbound, membership))
+	}
+
+	due, err := store.Catalogs().NextJoiningDue(ctx, account.ID, now)
+	require.NoError(t, err)
+	require.Equal(t, &first, due)
+
+	due, err = store.Catalogs().NextJoiningDue(ctx, account.ID, first)
+	require.NoError(t, err)
+	require.Equal(t, &second, due)
+
+	due, err = store.Catalogs().NextJoiningDue(ctx, account.ID, second)
+	require.NoError(t, err)
+	require.Nil(t, due)
+}
+
 func TestActivateCatalogWithMembershipsRollsBackChannelAndMemberships(t *testing.T) {
 	ctx := context.Background()
 	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "app.db"))

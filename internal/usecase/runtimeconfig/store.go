@@ -20,6 +20,7 @@ type CanonicalTrigger struct {
 
 type Snapshot struct {
 	Revision              uint64
+	MembershipRevision    uint64
 	OutboundPaused        bool
 	Roles                 map[domain.ID]domain.AccountRole
 	CatalogAssignments    map[domain.SourceCatalog][]domain.ID
