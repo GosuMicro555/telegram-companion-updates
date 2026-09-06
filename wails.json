@@ -1,0 +1,22 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "telegram-companion",
+  "outputfilename": "telegram-companion",
+  "frontend:dir": "frontend",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "http://localhost:5173",
+	"postBuildHooks": {
+		"linux/*": "bash ../../scripts/package_wails_model.sh linux",
+		"darwin/*": "bash ../../scripts/package_wails_model.sh darwin"
+	},
+  "author": {
+    "name": "codex",
+    "email": "codex@example.local"
+  },
+  "info": {
+    "productVersion": "0.8.6",
+    "comments": "Telegram Companion MVP desktop shell"
+  }
+}

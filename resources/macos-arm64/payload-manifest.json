@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "target": {
+    "os": "darwin",
+    "arch": "arm64",
+    "minimum_os": "13.0"
+  },
+  "payloads": [
+    {
+      "name": "sparkle",
+      "version": "2.9.2",
+      "url": "https://github.com/sparkle-project/Sparkle/releases/download/2.9.2/Sparkle-2.9.2.tar.xz",
+      "sha256": "1cb340cbbef04c6c0d162078610c25e2221031d794a3449d89f2f56f4df77c95",
+      "archive_type": "tar.xz",
+      "source": "Sparkle.framework",
+      "destination": "Contents/Frameworks",
+      "license": "BSD-2-Clause"
+    },
+    {
+      "name": "tor",
+      "version": "15.0.20",
+      "url": "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.20/tor-expert-bundle-macos-aarch64-15.0.20.tar.gz",
+      "sha256": "73fdccde8136678e41a625160993e6a9dc4f4ff8cd376318b5e41e5627d55682",
+      "archive_type": "tar.gz",
+      "source": "tor",
+      "destination": "Contents/Resources/tor",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "lyrebird",
+      "version": "15.0.20",
+      "url": "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.20/tor-expert-bundle-macos-aarch64-15.0.20.tar.gz",
+      "sha256": "73fdccde8136678e41a625160993e6a9dc4f4ff8cd376318b5e41e5627d55682",
+      "archive_type": "tar.gz",
+      "source": "lyrebird",
+      "destination": "Contents/Resources/tor/pluggable_transports",
+      "license": "BSD-3-Clause",
+      "license_file": "docs/lyrebird.txt",
+      "notice_file": "docs/lyrebird.txt",
+      "pt_config_sha256": "2f7cf039710e96b70ea7d45473b905f9a6ce9a8b65e9f03e2507135ae8c75407"
+    },
+    {
+      "name": "snowflake",
+      "version": "2.14.1",
+      "url": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/archive/v2.14.1/snowflake-v2.14.1.zip",
+      "sha256": "7d72d19fb2367810e06df632520de119aa5e4cc6834f28bc86e23fdf8ee9ae69",
+      "archive_type": "zip",
+      "source": "client",
+      "destination": "Contents/Resources/bin",
+      "license": "BSD-3-Clause"
+    }
+  ]
+}

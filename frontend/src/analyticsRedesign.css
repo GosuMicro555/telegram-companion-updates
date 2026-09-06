@@ -1,0 +1,381 @@
+.analyticsRedesign {
+  --analytics-border: var(--border);
+  --analytics-ink: var(--text);
+  --analytics-muted: var(--muted);
+  --analytics-violet: var(--accent);
+  color: var(--analytics-ink);
+  container-type: inline-size;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+  font-size: 12px;
+}
+
+.analyticsRedesign button,
+.analyticsRedesign input,
+.analyticsRedesign select { font: inherit; }
+
+.analyticsRedesign button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--analytics-border);
+  border-radius: 4px;
+  color: var(--analytics-ink);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 5px;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.analyticsRedesign button:hover:not(:disabled) {
+  border-color: var(--analytics-violet);
+  color: var(--accent-strong);
+}
+
+.analyticsRedesign button:focus-visible,
+.analyticsRedesign input:focus-visible,
+.analyticsRedesign select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--analytics-violet) 48%, transparent);
+  outline-offset: 1px;
+}
+
+.analyticsRedesign button:disabled { cursor: not-allowed; opacity: .48; }
+
+.analyticsRedesign__error {
+  border-bottom: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 9px 12px;
+}
+
+.analyticsRedesign__controlDeck {
+  border-bottom: 1px solid var(--analytics-border);
+  border-top: 1px solid var(--analytics-border);
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(380px, .95fr) minmax(280px, .85fr) minmax(550px, 1.7fr);
+  min-width: 0;
+}
+
+.analyticsRedesign__collectionControl,
+.analyticsRedesign__intervalControl,
+.analyticsRedesign__metricGrid {
+  min-height: 98px;
+  padding: 13px 16px;
+}
+
+.analyticsRedesign__collectionControl,
+.analyticsRedesign__intervalControl { border-right: 1px solid var(--analytics-border); }
+
+.analyticsRedesign__eyebrow,
+.analyticsRedesign__intervalCaption span,
+.analyticsRedesign__metricGrid dt {
+  color: var(--analytics-muted);
+  display: block;
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.analyticsRedesign__runtime {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.analyticsRedesign__startButton {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+  color: #fff !important;
+}
+
+.analyticsRedesign__stopButton { border-color: var(--border-strong) !important; }
+
+.analyticsRedesign__runButton {
+  border-color: color-mix(in srgb, var(--analytics-violet) 42%, var(--analytics-border)) !important;
+  color: var(--accent-strong) !important;
+}
+
+.analyticsRedesign__runtime button { padding: 0 7px; }
+
+.analyticsRedesign__intervalCaption {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+}
+
+.analyticsRedesign__intervalCaption strong { font-size: 12px; font-weight: 600; }
+
+.analyticsRedesign__intervalRange {
+  accent-color: var(--analytics-violet);
+  cursor: pointer;
+  display: block;
+  height: 18px;
+  margin: 11px 0 0;
+  padding: 0;
+  width: 100%;
+}
+
+.analyticsRedesign__intervalTicks {
+  color: var(--analytics-muted);
+  display: flex;
+  font-size: 10px;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.analyticsRedesign__metricGrid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.25fr) repeat(3, minmax(86px, .6fr));
+  margin: 0;
+  padding: 0;
+}
+
+.analyticsRedesign__metricGrid > div {
+  border-left: 1px solid var(--analytics-border);
+  min-width: 0;
+  padding: 13px 16px;
+}
+
+.analyticsRedesign__metricGrid > div:first-child { border-left: 0; }
+.analyticsRedesign__metric--next { min-width: 220px; }
+.analyticsRedesign__metricGrid dt { margin: 0; }
+.analyticsRedesign__metricGrid dd {
+  align-items: center;
+  display: flex;
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  gap: 6px;
+  letter-spacing: 0;
+  line-height: 28px;
+  margin: 6px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.analyticsRedesign__metricGrid small { color: var(--analytics-muted); display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.analyticsRedesign__tabs {
+  align-items: stretch;
+  border-bottom: 1px solid var(--analytics-border);
+  display: flex;
+  gap: 5px;
+  min-height: 47px;
+  overflow-x: auto;
+  padding: 0 10px;
+}
+
+.analyticsRedesign__tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--analytics-muted);
+  min-height: 47px;
+  padding: 0 12px;
+}
+
+.analyticsRedesign__tabs button.active {
+  border-bottom-color: var(--analytics-violet);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.analyticsRedesign__tableControls {
+  align-items: center;
+  border-bottom: 1px solid var(--analytics-border);
+  display: flex;
+  gap: 12px;
+  min-height: 58px;
+  padding: 10px 12px;
+}
+
+.analyticsRedesign__search {
+  align-items: center;
+  border: 1px solid var(--analytics-border);
+  color: var(--analytics-muted);
+  display: flex;
+  gap: 7px;
+  height: 32px;
+  padding: 0 9px;
+  width: min(310px, 100%);
+}
+
+.analyticsRedesign__search input,
+.analyticsRedesign__commands input,
+.analyticsRedesign__commands select {
+  background: transparent;
+  border: 0;
+  color: var(--analytics-ink);
+  min-width: 0;
+}
+
+.analyticsRedesign__search input { height: 100%; outline: 0; width: 100%; }
+.analyticsRedesign__commands { align-items: center; display: flex; flex: 1; flex-wrap: wrap; gap: 6px; justify-content: flex-end; position: relative; }
+.analyticsRedesign__commands > input { border: 1px solid var(--analytics-border); height: 30px; padding: 0 8px; width: 190px; }
+.analyticsRedesign__commands > select { border: 1px solid var(--analytics-border); height: 30px; padding: 0 6px; }
+.analyticsRedesign__columnsButton { padding: 0 !important; width: 30px; }
+.analyticsRedesign__clear { color: var(--danger) !important; }
+
+.analyticsRedesign__columnMenu {
+  background: var(--surface);
+  border: 1px solid var(--analytics-border);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--text) 14%, transparent);
+  display: grid;
+  gap: 4px;
+  min-width: 184px;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: 36px;
+  z-index: 8;
+}
+
+.analyticsRedesign__columnMenu label { align-items: center; display: flex; gap: 6px; min-height: 23px; }
+.analyticsRedesign__columnMenu input { accent-color: var(--analytics-violet); }
+
+.analyticsRedesign__tableFrame {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.analyticsRedesign__tableWrap {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.analyticsRedesign__grid { display: grid; min-width: 100%; width: max-content; }
+
+.analyticsRedesign__header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--analytics-border);
+  color: var(--analytics-muted);
+  font-size: 11px;
+  font-weight: 500;
+  min-height: 31px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.analyticsRedesign__header > div { align-items: stretch; border-right: 1px solid var(--analytics-border); display: flex; min-width: 48px; position: relative; }
+.analyticsRedesign__header button { border: 0; border-radius: 0; color: inherit; justify-content: flex-start; min-height: 30px; overflow: hidden; padding: 0 7px; text-align: left; text-overflow: ellipsis; width: calc(100% - 6px); }
+.analyticsRedesign__resize { cursor: col-resize; height: 100%; position: absolute; right: -3px; top: 0; width: 7px; z-index: 2; }
+
+.analyticsRedesign__row { border-bottom: 1px solid var(--analytics-border); min-height: 25px; }
+.analyticsRedesign__row:hover { background: color-mix(in srgb, var(--analytics-violet) 5%, var(--surface)); }
+.analyticsRedesign__row > div { align-items: center; display: flex; min-width: 48px; overflow: hidden; padding: 0 7px; text-overflow: ellipsis; white-space: nowrap; }
+.analyticsRedesign__row strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.analyticsRedesign__row mark, .analyticsRedesign__form mark { background: color-mix(in srgb, var(--analytics-violet) 20%, transparent); color: inherit; padding: 0; }
+
+.analyticsRedesign__class { color: var(--analytics-muted); font-size: 11px; }
+.analyticsRedesign__class--positive { color: var(--success); }
+.analyticsRedesign__class--negative { color: var(--danger); }
+.analyticsRedesign__class--service { color: var(--analytics-muted); }
+.analyticsRedesign__trend { align-items: center; display: inline-flex; font-variant-numeric: tabular-nums; gap: 2px; }
+.analyticsRedesign__trend--up { color: var(--success); }
+.analyticsRedesign__trend--down { color: var(--danger); }
+.analyticsRedesign__trend--steady { color: var(--analytics-muted); }
+
+.analyticsRedesign__formsButton { border: 0 !important; min-height: 24px !important; padding: 0 3px !important; width: auto; }
+.analyticsRedesign__actions { align-items: center; display: flex; gap: 3px; }
+.analyticsRedesign__actions button { min-height: 23px; padding: 0; width: 23px; }
+.analyticsRedesign .danger { color: var(--danger); }
+
+.analyticsRedesign__forms { background: var(--surface-subtle); border-bottom: 1px solid var(--analytics-border); display: grid; gap: 3px; padding: 4px 9px 6px; }
+.analyticsRedesign__form, .analyticsRedesign__formAdd { align-items: center; display: grid; gap: 5px; grid-template-columns: minmax(160px, 300px) 44px minmax(130px, 200px) 24px 24px; min-height: 24px; }
+.analyticsRedesign__form span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analyticsRedesign__form small { color: var(--analytics-muted); }
+.analyticsRedesign__form select, .analyticsRedesign__formAdd input { background: var(--surface); border: 1px solid var(--analytics-border); color: var(--analytics-ink); height: 24px; min-width: 0; padding: 0 5px; }
+.analyticsRedesign__form button, .analyticsRedesign__formAdd button { min-height: 24px; padding: 0; width: 24px; }
+.analyticsRedesign__formAdd { grid-template-columns: minmax(160px, 300px) 24px; }
+.analyticsRedesign__empty { color: var(--analytics-muted); padding: 20px 12px; }
+
+.analyticsRedesign__feedback { border-bottom: 1px solid var(--analytics-border); color: var(--analytics-muted); padding: 7px 12px; }
+
+.analyticsRedesign__modalBackdrop {
+  align-items: center;
+  background: color-mix(in srgb, var(--text) 32%, transparent);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 16px;
+  position: fixed;
+  z-index: 20;
+}
+
+.analyticsRedesign__bulkModal {
+  background: var(--surface);
+  border: 1px solid var(--analytics-border);
+  box-shadow: 0 18px 38px color-mix(in srgb, var(--text) 24%, transparent);
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  padding: 18px;
+  width: min(100%, 560px);
+}
+
+.analyticsRedesign__bulkModal h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.analyticsRedesign__bulkModal label { color: var(--analytics-muted); display: grid; gap: 6px; }
+.analyticsRedesign__bulkModal textarea { background: var(--surface); border: 1px solid var(--analytics-border); color: var(--analytics-ink); min-height: 150px; padding: 9px; resize: vertical; }
+.analyticsRedesign__filePicker { align-items: center; border: 1px solid var(--analytics-border); color: var(--analytics-ink) !important; cursor: pointer; display: inline-flex !important; justify-self: start; min-height: 30px; padding: 0 10px; }
+.analyticsRedesign__filePicker input { height: 1px; overflow: hidden; position: absolute; width: 1px; }
+.analyticsRedesign__bulkPreview { color: var(--analytics-muted); display: flex; gap: 14px; }
+.analyticsRedesign__bulkActions { display: flex; gap: 7px; justify-content: flex-end; }
+
+.analyticsRedesign__tableFooter {
+  align-items: center;
+  border-bottom: 1px solid var(--analytics-border);
+  color: var(--analytics-muted);
+  display: flex;
+  font-size: 11px;
+  gap: 14px;
+  justify-content: flex-end;
+  min-height: 44px;
+  padding: 7px 12px;
+}
+
+.analyticsRedesign__tableFooter > span { margin-right: auto; }
+.analyticsRedesign__tableFooter label { align-items: center; display: inline-flex; gap: 7px; }
+.analyticsRedesign__tableFooter select { background: var(--surface); border: 1px solid var(--analytics-border); color: var(--analytics-ink); height: 28px; min-width: 55px; padding: 0 5px; }
+.analyticsRedesign__tableFooter nav { align-items: center; display: flex; font-variant-numeric: tabular-nums; gap: 4px; }
+.analyticsRedesign__tableFooter nav button { min-height: 28px; padding: 0; width: 28px; }
+.analyticsRedesign__tableFooter nav span { color: var(--analytics-ink); min-width: 45px; text-align: center; }
+
+.analyticsRedesign__spin { animation: analyticsRedesignSpin 900ms linear infinite; }
+@keyframes analyticsRedesignSpin { to { transform: rotate(360deg); } }
+
+@container (max-width: 1120px) {
+  .analyticsRedesign__controlDeck { grid-template-columns: minmax(380px, .9fr) minmax(260px, 1.1fr); }
+  .analyticsRedesign__metricGrid { border-top: 1px solid var(--analytics-border); grid-column: 1 / -1; }
+  .analyticsRedesign__metricGrid > div:first-child { border-left: 0; }
+}
+
+@container (max-width: 720px) {
+  .analyticsRedesign__controlDeck { grid-template-columns: 1fr; }
+  .analyticsRedesign__collectionControl, .analyticsRedesign__intervalControl { border-bottom: 1px solid var(--analytics-border); border-right: 0; }
+  .analyticsRedesign__metricGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .analyticsRedesign__metric--next { min-width: 0; }
+  .analyticsRedesign__metricGrid > div:nth-child(odd) { border-left: 0; }
+  .analyticsRedesign__tableControls { align-items: stretch; flex-direction: column; }
+  .analyticsRedesign__search { width: 100%; }
+  .analyticsRedesign__commands { justify-content: flex-start; }
+  .analyticsRedesign__tableFooter { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+  .analyticsRedesign__tableFooter > span { flex-basis: 100%; }
+}

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Telegram Companion</string>
+	<key>CFBundleExecutable</key>
+	<string>telegram-companion</string>
+	<key>CFBundleIconFile</key>
+	<string>iconfile</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.telegramcompanion.desktop</string>
+	<key>CFBundleName</key>
+	<string>Telegram Companion</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>__RELEASE_VERSION__</string>
+	<key>CFBundleVersion</key>
+	<string>__RELEASE_VERSION__</string>
+	<key>LSArchitecturePriority</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>__APPCAST_URL__</string>
+	<key>SUPublicEDKey</key>
+	<string>__SPARKLE_PUBLIC_ED_KEY__</string>
+</dict>
+</plist>

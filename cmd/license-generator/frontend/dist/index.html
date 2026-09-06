@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Telegram Companion License Generator</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Внутренний инструмент</p>
+          <h1>Генератор лицензий</h1>
+        </div>
+        <div class="key-state" aria-live="polite">
+          <span id="backup-dot" class="status-dot"></span>
+          <span id="backup-state">Проверка ключа...</span>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <div class="issue-panel">
+          <div class="section-heading">
+            <div>
+              <h2>Новая лицензия</h2>
+              <p>Только для Telegram Companion на Mac с Apple Silicon.</p>
+            </div>
+            <span class="channel-badge">public-macos-arm64</span>
+          </div>
+
+          <div class="form-grid">
+            <label class="field field-wide">
+              <span>Machine ID</span>
+              <input id="machine-id" maxlength="64" autocomplete="off" spellcheck="false" placeholder="64 символа A-F и 0-9" />
+            </label>
+            <label class="field">
+              <span>Владелец</span>
+              <input id="owner" maxlength="200" autocomplete="off" placeholder="Имя владельца" />
+            </label>
+            <label class="field">
+              <span>Комментарий</span>
+              <input id="comment" maxlength="2000" autocomplete="off" placeholder="Необязательно" />
+            </label>
+          </div>
+
+          <div class="expiry-row">
+            <label class="check-control"><input id="expiry-enabled" type="checkbox" /> Ограничить срок</label>
+            <input id="expiry" type="date" disabled />
+          </div>
+
+          <button id="issue" class="primary-button" type="button">Выпустить лицензию</button>
+
+          <div class="token-block">
+            <div class="token-heading">
+              <span>Текстовый ключ</span>
+              <span id="license-id" class="license-id"></span>
+            </div>
+            <textarea id="token" readonly spellcheck="false" placeholder="После выпуска ключ появится здесь"></textarea>
+            <div class="button-row">
+              <button id="copy" class="secondary-button" type="button" disabled>Копировать</button>
+              <button id="save" class="secondary-button" type="button" disabled>Сохранить .tcomplicense</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="security-panel">
+          <h2>Защита ключа</h2>
+          <p>Активный Ed25519 ключ хранится локально и защищён Windows DPAPI.</p>
+          <label class="field">
+            <span>Пароль резервной копии</span>
+            <input id="backup-password" type="password" autocomplete="new-password" minlength="12" placeholder="Не менее 12 символов" />
+          </label>
+          <div class="security-actions">
+            <button id="backup" class="secondary-button" type="button">Создать backup</button>
+            <button id="restore" class="secondary-button" type="button">Восстановить</button>
+          </div>
+          <div class="public-key">
+            <span>Публичный ключ лицензирования для сборки</span>
+            <code id="public-key">Загрузка...</code>
+          </div>
+          <div class="public-key">
+            <span>Bootstrap Seed ID</span>
+            <code id="seed-id">Загрузка...</code>
+          </div>
+          <div class="public-key">
+            <span>Публичный ключ отзывов</span>
+            <code id="revocation-public-key">Загрузка...</code>
+          </div>
+          <div class="public-key">
+            <span>Состояние публикации отзывов</span>
+            <code id="revocation-publication-state">Загрузка...</code>
+          </div>
+          <label class="field">
+            <span>GitHub fine-grained PAT для файла отзывов</span>
+            <input id="revocation-credential" type="password" autocomplete="new-password" placeholder="Сохраняется только в защищённом хранилище" />
+          </label>
+          <button id="configure-revocation" class="secondary-button" type="button">Сохранить доступ публикации</button>
+            <button id="export-bootstrap-seed" class="secondary-button" type="button">Экспорт seed для сборки</button>
+          <p class="security-note">Отзывы применяются только в финальной сборке 0.8.3 с поддержкой отзывов или более новой версии. Старые версии приложения не проверяют отзывы лицензий.</p>
+          <p class="security-note">Backup переносим между компьютерами только вместе с паролем. Он не публикуется в GitHub Releases.</p>
+        </aside>
+      </section>
+
+      <section class="history-panel">
+        <div class="section-heading compact">
+          <div>
+            <h2>История выдачи</h2>
+            <p>Только метаданные. Токены и приватный ключ здесь не сохраняются.</p>
+          </div>
+          <div class="button-row">
+            <button id="import-license" class="secondary-button" type="button">Импорт .tcomplicense</button>
+            <span id="history-count" class="counter">0</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Дата</th><th>Владелец</th><th>License ID</th><th>Срок</th><th>Статус</th><th>Действие</th></tr></thead>
+            <tbody id="history-body"><tr><td colspan="6" class="empty">Лицензии ещё не выпускались</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
