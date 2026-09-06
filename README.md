@@ -29,7 +29,9 @@ On first Task 12 startup, a legacy Bolt `data/app.db` is atomically renamed to
 
 ## Toolchain
 
-The current dependency graph requires Go 1.26. CI and local verification run
+Build and verify with Go 1.26.5 or newer. Earlier 1.26 patch releases do not
+pass the descriptor-relative filesystem checks used by startup validation.
+CI and local verification run
 heavy Go commands serially with `GOMAXPROCS=2` and `-p=1`. Node 22, Wails
 2.13.0, and golangci-lint 2.11.4 are used in CI.
 
