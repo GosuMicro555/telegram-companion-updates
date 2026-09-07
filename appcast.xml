@@ -3,13 +3,14 @@
     <channel>
         <title>Telegram Companion</title>
         <item>
-            <title>0.8.4</title>
-            <pubDate>Sat, 29 Aug 2026 21:30:41 +0300</pubDate>
-            <sparkle:version>0.8.4</sparkle:version>
-            <sparkle:shortVersionString>0.8.4</sparkle:shortVersionString>
+            <title>0.8.7</title>
+            <pubDate>Mon, 07 Sep 2026 03:19:33 +0300</pubDate>
+            <sparkle:version>0.8.7</sparkle:version>
+            <sparkle:shortVersionString>0.8.7</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/GosuMicro555/telegram-companion-updates/releases/download/v0.8.4/Telegram-Companion-0.8.4-arm64.zip" length="330053920" type="application/octet-stream" sparkle:edSignature="GCkBqeqQQfnFlXqrwFuoFhM4iHe1EDdXE8g3Gtd4FiX7kmucRdp0Rdv10Ql9D0EuMqFJKqLiGTamrXHRqtK0Cg=="/>
+            <description><![CDATA[<h2>Тестирование доставки обновлений</h2><p>Обновление с 0.8.6 до 0.8.7. Изменены только номер версии, приветственный экран и раздел «Обновления». Функции приложения сохранены.</p>]]></description>
+            <enclosure url="https://github.com/GosuMicro555/telegram-companion-updates/releases/download/v0.8.7/Telegram-Companion-0.8.7-arm64.zip" length="330183073" type="application/octet-stream" sparkle:edSignature="EMw2BT8h49G89gMGaS0mFie4GTPv4hSZqXbe+eTCWaV90cmoYOvQrKjy9BvFe+OJ4Y2KV9SfFL788SqKl/QcDQ=="/>
         </item>
     </channel>
 </rss>
