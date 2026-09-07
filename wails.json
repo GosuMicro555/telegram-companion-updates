@@ -16,7 +16,7 @@
     "email": "codex@example.local"
   },
   "info": {
-    "productVersion": "0.8.6",
+    "productVersion": "0.8.7",
     "comments": "Telegram Companion MVP desktop shell"
   }
 }

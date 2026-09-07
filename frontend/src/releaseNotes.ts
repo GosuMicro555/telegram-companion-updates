@@ -11,6 +11,21 @@ export const RELEASE_NOTES_STORAGE_KEY = "telegram-companion.seen-release-versio
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "0.8.7",
+    date: "7 сентября 2026",
+    title: { ru: "Тестирование доставки обновлений", en: "Update delivery test" },
+    items: {
+      ru: [
+        "Добро пожаловать в Telegram Companion 0.8.7. Этот выпуск предназначен для проверки обновления с версии 0.8.6.",
+        "Функции приложения не изменены. Обновлены только номер версии, приветственный экран и информация в разделе «Обновления»."
+      ],
+      en: [
+        "Welcome to Telegram Companion 0.8.7. This release is intended to test updating from version 0.8.6.",
+        "Application features are unchanged. Only the version number, welcome screen, and information in Updates have been updated."
+      ]
+    }
+  },
+  {
     version: "0.8.6",
     date: "7 сентября 2026",
     title: { ru: "Импорт TData и исправления подключения", en: "TData import and connection fixes" },

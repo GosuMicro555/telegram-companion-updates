@@ -21,8 +21,7 @@ function memoryStorage() {
 
 describe("release notes", () => {
   it("publishes 0.8.6 proxy corrective notes", () => {
-    expect(APP_VERSION).toBe("0.8.6");
-    const release = releaseNotesForVersion(APP_VERSION);
+    const release = releaseNotesForVersion("0.8.6");
     expect(release?.version).toBe("0.8.6");
     expect(release?.items.ru.join(" ")).toContain("Tor");
     expect(release?.items.ru.join(" ")).toContain("Lyrebird");
@@ -52,17 +51,18 @@ describe("release notes", () => {
 
   it("presents current notes once and records acknowledgement", () => {
     const storage = memoryStorage();
+    storage.setItem(RELEASE_NOTES_STORAGE_KEY, "0.8.6");
 
     expect(shouldPresentReleaseNotes(storage)).toBe(true);
-    expect(storage.getItem(RELEASE_NOTES_STORAGE_KEY)).toBeNull();
+    expect(storage.getItem(RELEASE_NOTES_STORAGE_KEY)).toBe("0.8.6");
     markReleaseNotesSeen(storage);
     expect(storage.getItem(RELEASE_NOTES_STORAGE_KEY)).toBe(APP_VERSION);
     expect(shouldPresentReleaseNotes(storage)).toBe(false);
   });
 
-  it("keeps the functional release history in descending order through 0.8.6", () => {
-    expect(RELEASE_NOTES.slice(0, 7).map((release) => release.version)).toEqual(["0.8.6", "0.8.5", "0.8.3", "0.8.2", "0.8.1", "0.8.0", "0.7.0"]);
-    expect(currentReleaseNotes().version).toBe("0.8.6");
+  it("keeps the functional release history in descending order through 0.8.7", () => {
+    expect(RELEASE_NOTES.slice(0, 8).map((release) => release.version)).toEqual(["0.8.7", "0.8.6", "0.8.5", "0.8.3", "0.8.2", "0.8.1", "0.8.0", "0.7.0"]);
+    expect(currentReleaseNotes().version).toBe("0.8.7");
   });
 
   it("keeps release notes localized and balanced", () => {

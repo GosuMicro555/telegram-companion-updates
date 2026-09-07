@@ -4,9 +4,9 @@ import { readFileSync } from "node:fs";
 import { APP_VERSION, APP_VERSION_LABEL } from "./version";
 
 describe("release version", () => {
-  it("declares the 0.8.6 release and compact sidebar label", () => {
-    expect(APP_VERSION).toBe("0.8.6");
-    expect(APP_VERSION_LABEL).toBe("v0.8.6");
+  it("declares the 0.8.7 release and compact sidebar label", () => {
+    expect(APP_VERSION).toBe("0.8.7");
+    expect(APP_VERSION_LABEL).toBe("v0.8.7");
   });
 
   it("keeps the Wails product version aligned", () => {
