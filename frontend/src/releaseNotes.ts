@@ -12,16 +12,16 @@ export const RELEASE_NOTES_STORAGE_KEY = "telegram-companion.seen-release-versio
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
     version: "0.8.7",
-    date: "7 сентября 2026",
-    title: { ru: "Тестирование доставки обновлений", en: "Update delivery test" },
+    date: "8 сентября 2026",
+    title: { ru: "Проверка лицензии после пробуждения", en: "License check after wake" },
     items: {
       ru: [
-        "Добро пожаловать в Telegram Companion 0.8.7. Этот выпуск предназначен для проверки обновления с версии 0.8.6.",
-        "Функции приложения не изменены. Обновлены только номер версии, приветственный экран и информация в разделе «Обновления»."
+        "После пробуждения Mac приложение сразу проверяет статус лицензии, не дожидаясь очередного интервала.",
+        "Сигнал пробуждения не теряется, если предыдущая проверка ещё выполняется."
       ],
       en: [
-        "Welcome to Telegram Companion 0.8.7. This release is intended to test updating from version 0.8.6.",
-        "Application features are unchanged. Only the version number, welcome screen, and information in Updates have been updated."
+        "After the Mac wakes, the app immediately checks the license status without waiting for the next interval.",
+        "A wake signal is retained when the previous license check is still running."
       ]
     }
   },
