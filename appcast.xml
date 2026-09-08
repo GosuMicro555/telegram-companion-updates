@@ -4,13 +4,16 @@
         <title>Telegram Companion</title>
         <item>
             <title>0.8.7</title>
-            <pubDate>Mon, 07 Sep 2026 03:19:33 +0300</pubDate>
-            <sparkle:version>0.8.7</sparkle:version>
+            <pubDate>Tue, 08 Sep 2026 15:31:43 +0300</pubDate>
+            <sparkle:version>0.8.7.1</sparkle:version>
             <sparkle:shortVersionString>0.8.7</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>Тестирование доставки обновлений</h2><p>Обновление с 0.8.6 до 0.8.7. Изменены только номер версии, приветственный экран и раздел «Обновления». Функции приложения сохранены.</p>]]></description>
-            <enclosure url="https://github.com/GosuMicro555/telegram-companion-updates/releases/download/v0.8.7/Telegram-Companion-0.8.7-arm64.zip" length="330183073" type="application/octet-stream" sparkle:edSignature="EMw2BT8h49G89gMGaS0mFie4GTPv4hSZqXbe+eTCWaV90cmoYOvQrKjy9BvFe+OJ4Y2KV9SfFL788SqKl/QcDQ=="/>
+            <description><![CDATA[<h2>Telegram Companion 0.8.7</h2>
+<p>После выхода Mac из сна приложение теперь сразу проверяет актуальность лицензии.</p>
+<p>Внутренняя сборка 0.8.7.1 доставляет это исправление пользователям версии 0.8.7.</p>
+]]></description>
+            <enclosure url="https://github.com/GosuMicro555/telegram-companion-updates/releases/download/v0.8.7.1/Telegram-Companion-0.8.7-wake-fix-arm64.zip" length="330185653" type="application/octet-stream" sparkle:edSignature="MRaOlcGH/+vHuGtrjyuKhxuF0ouSquIUn3TD2//Jss/PNvrDiRAJLQR0lvRbZ36iuAgTKolv2UwpfjXP3txwAQ=="/>
         </item>
     </channel>
 </rss>
