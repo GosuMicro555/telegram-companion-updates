@@ -137,6 +137,59 @@ func TestSupervisorCoalescesManualChecksAndStopsOnTerminalDecision(t *testing.T)
 	}
 }
 
+func TestSupervisorRunsWakeCheckQueuedDuringAnActiveCheck(t *testing.T) {
+	timers := newFakeTimerFactory()
+	firstStarted := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	var calls atomic.Int32
+	checker := checkerFunc(func(context.Context, string) (Decision, error) {
+		if calls.Add(1) == 1 {
+			close(firstStarted)
+			<-releaseFirst
+		}
+		return Active, nil
+	})
+	supervisor, err := NewSupervisor("license-wake-during-check", checker, timers.New, func() time.Duration { return 0 }, func(Decision) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() { defer close(done); supervisor.Run(ctx) }()
+
+	timers.Wait(t, 0).Fire()
+	select {
+	case <-firstStarted:
+	case <-time.After(time.Second):
+		t.Fatal("initial check did not start")
+	}
+	supervisor.CheckNow()
+	close(releaseFirst)
+
+	pendingNormalTimer := timers.Wait(t, 1)
+	if pendingNormalTimer.delay != NormalCheckMinimum {
+		t.Fatalf("normal timer delay = %v, want %v", pendingNormalTimer.delay, NormalCheckMinimum)
+	}
+	deadline := time.After(time.Second)
+	for calls.Load() < 2 {
+		select {
+		case <-deadline:
+			t.Fatal("wake queued during active check did not start a follow-up check")
+		case <-timers.created:
+		}
+	}
+	if !pendingNormalTimer.stopped.Load() {
+		t.Fatal("wake follow-up did not interrupt the pending normal timer")
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("supervisor did not stop")
+	}
+}
+
 func TestSupervisorCancellationStopsTimerAndChecker(t *testing.T) {
 	timers := newFakeTimerFactory()
 	checkerStarted := make(chan struct{})

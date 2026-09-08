@@ -24,6 +24,7 @@ import (
 	"telegram-companion/internal/bootstrapstate"
 	"telegram-companion/internal/buildinfo"
 	"telegram-companion/internal/license"
+	platformwake "telegram-companion/internal/platform/wake"
 	"telegram-companion/internal/revocation"
 	secretservice "telegram-companion/internal/service/secrets"
 	wailsbindings "telegram-companion/internal/transport/wails"
@@ -114,12 +115,18 @@ type desktopRelaunchRequester interface {
 	Request(context.Context) error
 }
 
+type desktopWakeObserver interface {
+	Start()
+	Stop()
+}
+
 type desktopRevocationRuntime struct {
 	gate          desktopTerminalGateTarget
 	target        desktopRevocationTarget
 	relauncher    desktopRelaunchRequester
 	quit          func(context.Context)
 	supervisor    *revocation.Supervisor
+	wake          desktopWakeObserver
 	rejectTimeout time.Duration
 
 	rootMu sync.RWMutex
@@ -154,6 +161,7 @@ func newDesktopRevocationRuntime(
 		return nil, errors.New("desktop revocation supervisor is invalid")
 	}
 	runtime.supervisor = supervisor
+	runtime.wake = platformwake.New(supervisor.CheckNow)
 	return runtime, nil
 }
 
@@ -175,6 +183,9 @@ func (runtime *desktopRevocationRuntime) Startup(root context.Context) {
 	worker, cancel := context.WithCancel(context.Background())
 	runtime.cancel = cancel
 	runtime.started = true
+	if runtime.wake != nil {
+		runtime.wake.Start()
+	}
 	runtime.lifecycleMu.Unlock()
 	go runtime.supervisor.Run(worker)
 }
@@ -184,9 +195,17 @@ func (runtime *desktopRevocationRuntime) Stop() {
 		return
 	}
 	runtime.lifecycleMu.Lock()
+	if runtime.stopped {
+		runtime.lifecycleMu.Unlock()
+		return
+	}
 	runtime.stopped = true
 	cancel := runtime.cancel
+	wake := runtime.wake
 	runtime.lifecycleMu.Unlock()
+	if wake != nil {
+		wake.Stop()
+	}
 	if cancel != nil {
 		cancel()
 	}

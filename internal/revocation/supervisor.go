@@ -85,7 +85,6 @@ func (supervisor *Supervisor) Run(ctx context.Context) {
 		timer.Stop()
 
 		decision, err := supervisor.checker.Check(ctx, supervisor.licenseID)
-		drainManual(supervisor.manual)
 		if ctx.Err() != nil {
 			return
 		}

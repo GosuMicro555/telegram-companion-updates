@@ -117,6 +117,7 @@ func TestDesktopRevocationRuntimeShutsDownServicesAfterOperationRejectionTimeout
 func TestDesktopRevocationRuntimeStopBeforeStartupPreventsChecks(t *testing.T) {
 	events := &desktopRevocationEvents{}
 	checker := &countingDesktopRevocationChecker{decision: revocation.Revoked}
+	wake := &desktopWakeObserverStub{}
 	runtime, err := newDesktopRevocationRuntime(
 		desktopTerminalGate{events: events},
 		desktopLicensedRuntimeStub{events: events},
@@ -128,10 +129,71 @@ func TestDesktopRevocationRuntimeStopBeforeStartupPreventsChecks(t *testing.T) {
 		func() time.Duration { return 0 },
 	)
 	require.NoError(t, err)
+	wake.callback = runtime.supervisor.CheckNow
+	runtime.wake = wake
 	runtime.Stop()
 	runtime.Startup(context.Background())
+	wake.Signal()
 	require.Never(t, func() bool { return checker.calls.Load() != 0 }, 50*time.Millisecond, time.Millisecond)
 	require.Empty(t, events.snapshot())
+	require.Zero(t, wake.starts.Load())
+	require.Equal(t, int32(1), wake.stops.Load())
+}
+
+func TestDesktopRevocationRuntimeStartsAndStopsWakeObserverOnce(t *testing.T) {
+	events := &desktopRevocationEvents{}
+	wake := &desktopWakeObserverStub{}
+	timers := newDesktopRevocationTimerFactory()
+	runtime, err := newDesktopRevocationRuntime(
+		desktopTerminalGate{events: events}, desktopLicensedRuntimeStub{events: events},
+		desktopRelaunchRequest{events: events}, func(context.Context) { events.add("quit") },
+		desktopRevocationChecker{decision: revocation.Active}, "license-runtime-wake-lifecycle",
+		timers.New, func() time.Duration { return 0 },
+	)
+	require.NoError(t, err)
+	wake.callback = runtime.supervisor.CheckNow
+	runtime.wake = wake
+
+	runtime.Startup(context.Background())
+	runtime.Startup(context.Background())
+	runtime.Stop()
+	runtime.Stop()
+
+	require.Equal(t, int32(1), wake.starts.Load())
+	require.Equal(t, int32(1), wake.stops.Load())
+}
+
+func TestDesktopRevocationRuntimeChecksImmediatelyAfterWakeDuringNormalCadence(t *testing.T) {
+	events := &desktopRevocationEvents{}
+	timers := newDesktopRevocationTimerFactory()
+	checker := &scriptedDesktopRevocationChecker{results: []revocation.Decision{revocation.Active, revocation.Revoked}}
+	wake := &desktopWakeObserverStub{}
+
+	runtime, err := newDesktopRevocationRuntime(
+		desktopTerminalGate{events: events},
+		desktopLicensedRuntimeStub{events: events},
+		desktopRelaunchRequest{events: events},
+		func(context.Context) { events.add("quit") }, checker, "license-runtime-wake", timers.New,
+		func() time.Duration { return 0 },
+	)
+	require.NoError(t, err)
+	wake.callback = runtime.supervisor.CheckNow
+	runtime.wake = wake
+	runtime.Startup(context.Background())
+
+	timers.Wait(t, 0).Fire()
+	normalTimer := timers.Wait(t, 1)
+	require.Equal(t, revocation.NormalCheckMinimum, normalTimer.delay)
+
+	wake.Signal()
+	require.Eventually(t, func() bool { return len(events.snapshot()) == 5 }, time.Second, time.Millisecond)
+	require.Equal(t, []string{"gate:revoked", "reject", "shutdown", "relaunch", "quit"}, events.snapshot())
+	require.Equal(t, int32(2), checker.calls.Load())
+	require.True(t, normalTimer.stopped.Load(), "wake must interrupt the pending normal timer")
+
+	runtime.Stop()
+	require.Equal(t, int32(1), wake.starts.Load())
+	require.Equal(t, int32(1), wake.stops.Load())
 }
 
 type desktopRevocationEvents struct {
@@ -202,6 +264,84 @@ type countingDesktopRevocationChecker struct {
 	decision revocation.Decision
 	calls    atomic.Int32
 }
+
+type scriptedDesktopRevocationChecker struct {
+	results []revocation.Decision
+	calls   atomic.Int32
+}
+
+func (checker *scriptedDesktopRevocationChecker) Check(context.Context, string) (revocation.Decision, error) {
+	index := int(checker.calls.Add(1)) - 1
+	if index >= len(checker.results) {
+		return revocation.Active, nil
+	}
+	return checker.results[index], nil
+}
+
+type desktopWakeObserverStub struct {
+	callback func()
+	starts   atomic.Int32
+	stops    atomic.Int32
+	stopped  atomic.Bool
+}
+
+func (observer *desktopWakeObserverStub) Start() { observer.starts.Add(1) }
+func (observer *desktopWakeObserverStub) Stop() {
+	observer.stopped.Store(true)
+	observer.stops.Add(1)
+}
+func (observer *desktopWakeObserverStub) Signal() {
+	if observer.starts.Load() > 0 && !observer.stopped.Load() && observer.callback != nil {
+		observer.callback()
+	}
+}
+
+type desktopRevocationTimerFactory struct {
+	mu     sync.Mutex
+	timers []*desktopRevocationTimer
+	new    chan struct{}
+}
+
+func newDesktopRevocationTimerFactory() *desktopRevocationTimerFactory {
+	return &desktopRevocationTimerFactory{new: make(chan struct{}, 8)}
+}
+
+func (factory *desktopRevocationTimerFactory) New(delay time.Duration) revocation.SupervisorTimer {
+	timer := &desktopRevocationTimer{delay: delay, channel: make(chan time.Time, 1)}
+	factory.mu.Lock()
+	factory.timers = append(factory.timers, timer)
+	factory.mu.Unlock()
+	factory.new <- struct{}{}
+	return timer
+}
+
+func (factory *desktopRevocationTimerFactory) Wait(t *testing.T, index int) *desktopRevocationTimer {
+	t.Helper()
+	for {
+		factory.mu.Lock()
+		if index < len(factory.timers) {
+			timer := factory.timers[index]
+			factory.mu.Unlock()
+			return timer
+		}
+		factory.mu.Unlock()
+		select {
+		case <-factory.new:
+		case <-time.After(time.Second):
+			t.Fatalf("timer %d was not created", index)
+		}
+	}
+}
+
+type desktopRevocationTimer struct {
+	delay   time.Duration
+	channel chan time.Time
+	stopped atomic.Bool
+}
+
+func (timer *desktopRevocationTimer) C() <-chan time.Time { return timer.channel }
+func (timer *desktopRevocationTimer) Stop() bool          { return !timer.stopped.Swap(true) }
+func (timer *desktopRevocationTimer) Fire()               { timer.channel <- time.Now() }
 
 func (checker *countingDesktopRevocationChecker) Check(context.Context, string) (revocation.Decision, error) {
 	checker.calls.Add(1)
